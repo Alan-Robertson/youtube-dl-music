@@ -8,10 +8,10 @@ This script downloads and saves audio from a youtube url into an aac/m4a file (t
 format of youtube audio), applies metadata based on the user-input name, and normalizes the audio/volume.
   * If you just want to download the m4a files and do nothing else, comment out
       the parts below that adjust the volume/add metadata.
-  * To change the download location, edit the DIRECTORY variable.
-  * If youtube-dl STOPS WORKING, it is often because youtube.com has changed how they store
+  * To change the download location, edit the `directory` variable.
+  * If youtube-dl **stops working**, it is often because youtube.com has changed how they store
       video/audio. The youtube-dl developers are very active and usually will release an updated
-      version within a couple days; just call youtube-dl -U ("update") and it should start working again.
+      version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 
 ## Requirements
   * youtube-dl (brew install youtube-dl with Homebrew on Mac;
