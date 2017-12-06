@@ -1,6 +1,7 @@
 # VIM extras #
 ##############
 .session.*
+.*.sw[a-z]
 
 # Compiled source #
 ###################
