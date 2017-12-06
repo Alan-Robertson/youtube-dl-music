@@ -24,11 +24,12 @@ format of youtube audio), applies metadata based on the user-input name, and nor
       see github: https://github.com/quodlibet/mutagen)
 
 ## Usage
+
     youtube <URL> <filename>
 
-    Filename can have un-escaped spaces. Escape any quotes/apostraphes. Metadata will be INFERRED from 
-    filename if you follow the format <Artist> - <Title>; everything left of space-dash-space
-    is artist, everything to the right is title. Makes life easier when using media player.
+Filename can have un-escaped spaces. Escape any quotes/apostraphes. Metadata will be INFERRED from 
+filename if you follow the format `<Artist> - <Title>`; everything left of space-dash-space
+is artist, everything to the right is title. Makes life easier when using media player.
 
 # Suggestions
 Use Swinsian instead of iTunes for playback. The two dealbreakers are:
