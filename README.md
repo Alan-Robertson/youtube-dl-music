@@ -37,18 +37,18 @@ so we make sure words are all identical).
 2. gets the artist ID (and asks for user input if artist-search has ambiguous (e.g. Animals vs. The Animals) and
 record user responses in a file
 3. runs strict search with artist ID of recordings, and filters recordings based on names
-  * ignores Comfortably Numb (remix) in search for Comfortably Numb
-  * allows The Wall (part 1) or The Wall (part i) for search for The Wall
-  * ignoresAtom Heart Mother or Matilda Mother but allows Mother
+    * ignores Comfortably Numb (remix) in search for Comfortably Numb
+    * allows The Wall (part 1) or The Wall (part i) for search for The Wall
+    * ignores Atom Heart Mother or Matilda Mother but allows Mother
 4. gets release-groups from the release-list of each recording
 5. groups the releases into release-groups (can be overlap)
 6. writes release-name title from shortest titles amongst all releases in *chosen release group*
-  * writes The Wall instead of The Wall (anniversary edition)
+    * writes The Wall instead of The Wall (anniversary edition)
 7. writes release-year from earliest year amongst all releases in *all release groups*
 8. writes cover-art from most *modern* release and most *modern* release format amongst releases in release group
 and gets genre from Discogs page of corresponding release-group
-  * optionally prompt user to choose release group
-  * optionally keep iterating through release-groups if no Discogs genre found
+    * optionally prompt user to choose release group
+    * optionally keep iterating through release-groups if no Discogs genre found
 
 ## Suggestions
 Use Swinsian instead of iTunes for playback. The two dealbreakers are:
