@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-"""This script adds metadata from the MusicBrainz database based on the <artist> - <title> 
+"""
+This script adds metadata from the MusicBrainz database based on the <artist> - <title> 
 from so-formatted audio files. If file is not AAC/MP4 (iTunes default), will use ID3v2.4 header; 
-otherwise, will use special MP4 metadata assignment. Requires musicbrainzngs (use pip install)."""
+otherwise, will use special MP4 metadata assignment. Requires musicbrainzngs (use pip install).
+"""
 # TODO:
 # 1) Download every available image, then ask user which they prefer (can browse in directory); make this an
 # option, otherwise just get automatically
@@ -37,13 +39,27 @@ dictionary = Dict('en_US')
 for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
     dictionary.add(exception) # not in dictionary, but we allow it
         # also need to add ampersand, because returns False
+
+#-------------------------------------------------------------------------------
+# Configure
+#-------------------------------------------------------------------------------
+# Read config file
+if not os.path.exists("config"):
+    raise IOError("To get metadata, you must put tokens in the config file.")
+with open("config", "r") as file:
+    config = file.readlines()
+config = [l.strip() for l in config]
+config = [l.split('=') for l in config] # tuples of pairs
+config = {t[0].strip(): t[1].strip() for t in config} # to dictionary
+if 'username' not in config or 'password' not in config:
+    raise ValueError("config file must include username/password for MusicBrainz database searching.")
+if 'token' not in config:
+    raise ValueError("config file must include token for discogs database searching.")
 # Config MusicBrainz
-username, password = 'lukelbd', '9552Garbage'
-mb.auth(username, password)
-mb.set_useragent('Self', 'NA', contact='lukelbd@gmail.com')
+mb.auth(config['username'], config['password'])
+mb.set_useragent('Self', 'NA', contact=config.get('contact',''))
 # Config Discogs
-token = 'DDDnPzDkDNvUYWzcsWFgowXpuIgXPEqxkkBTZdcq'
-client = discogs_client.Client('Personal',user_token=token)
+client = discogs_client.Client('Personal', user_token=config['token'])
 
 #------------------------------------------------------------------------------
 # Setup

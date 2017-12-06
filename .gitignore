@@ -1,3 +1,7 @@
+# Sensitive content #
+#####################
+config
+
 # VIM extras #
 ##############
 .session.*
