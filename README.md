@@ -1,4 +1,4 @@
-# By Careful!
+# Be Careful!
 Downloading content from the internet for personal use (not distribution)
 is not illegal (criminal law or copyright infringement); but by using this
 script, you are breaking Youtube's Terms of Service (civil law).
