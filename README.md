@@ -16,8 +16,8 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 ## Requirements
   * youtube-dl (`brew install youtube-dl` with Homebrew on Mac;
       see github: https://github.com/rg3/youtube-dl)
-  * ffmpeg (`conda install ffmpeg [any anaconda distribution],
-      or `brew install ffmpeg with Homebrew on Mac)
+  * ffmpeg (`conda install ffmpeg` [any anaconda distribution],
+      or `brew install ffmpeg` with Homebrew on Mac)
   * ffmpeg-normalize (python package for normalizing volume, requires ffmpeg accessible from shell;
       `pip install ffmpeg-normalize`; see github: https://github.com/slhck/ffmpeg-normalize)
   * mutagen (python package for writine metadata; `conda install mutagen`, `pip install mutagen`, etc;
