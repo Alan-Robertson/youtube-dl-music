@@ -1,7 +1,7 @@
 ## Be Careful!
 Downloading content from the internet for personal use (not distribution)
 is not illegal (criminal law or copyright infringement); but by using this
-script, you are breaking Youtube's Terms of Service (civil law).
+script, you are breaking Youtube's Terms of Service (civil law). Then again, that's a problem for the `youtube-dl` devs, not us :)
 
 ## Overview
 This script downloads and saves audio from a youtube url into an aac/m4a file (the native
