@@ -45,7 +45,7 @@ for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
 #-------------------------------------------------------------------------------
 # Read config file
 if not os.path.exists("config"):
-    raise IOError("To get metadata, you must put tokens in the config file.")
+    raise IOError("To get metadata, you must add fields to the config file.")
 with open("config", "r") as file:
     config = file.readlines()
 config = [l.strip() for l in config]
