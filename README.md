@@ -23,9 +23,8 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 
     youtube <URL> <filename>
 
-Filename can have un-escaped spaces. Escape any quotes/apostraphes. Metadata will be INFERRED from 
-filename if you follow the format `<Artist> - <Title>`; everything left of space-dash-space
-is artist, everything to the right is title. Makes life easier when using media player.
+Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
+filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
 ## Overview of metadata script
 There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
