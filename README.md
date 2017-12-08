@@ -32,23 +32,28 @@ filename if you follow the format `<Artist> - <Title>`; everything left of space
 is artist, everything to the right is title. Makes life easier when using media player.
 
 ## Overview of metadata script
-1. uses extra-strict search to narrow down artist and songnames (strict search still allows extra words; 
+Add lines to the "config" file to enable metadata tagging. There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why not use both? :)
+  * Create a MusicBrainz account and create a token for the API; add that to the `config` file with `token=<your token here>`.
+  * Create a Discogs account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
+
+Here's a play-by-play of what the metadata script does:
+1. Uses extra-strict search to narrow down artist and songnames (strict search still allows extra words; 
 so we make sure words are all identical). 
-2. gets the artist ID (and asks for user input if artist-search has ambiguous (e.g. Animals vs. The Animals) and
-record user responses in a file
-3. runs strict search with artist ID of recordings, and filters recordings based on names
-    * ignores Comfortably Numb (remix) in search for Comfortably Numb
-    * allows The Wall (part 1) or The Wall (part i) for search for The Wall
-    * ignores Atom Heart Mother or Matilda Mother but allows Mother
-4. gets release-groups from the release-list of each recording
-5. groups the releases into release-groups (can be overlap)
-6. writes release-name title from shortest titles amongst all releases in *chosen release group*
-    * writes The Wall instead of The Wall (anniversary edition)
-7. writes release-year from earliest year amongst all releases in *all release groups*
-8. writes cover-art from most *modern* release and most *modern* release format amongst releases in release group
+2. Gets the artist ID (and asks for user input if artist-search has ambiguous (e.g. Animals vs. The Animals) and
+record user responses in a file.
+3. Runs strict search with artist ID of recordings, and filters recordings based on names.
+    * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
+    * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
+    * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
+4. Gets release-groups from the release-list of each recording.
+5. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
+6. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
+    * Writes "The Wall" instead of "The Wall (anniversary edition)".
+7. Writes release-year from earliest year amongst all releases in *all release groups*
+8. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group
 and gets genre from Discogs page of corresponding release-group
-    * optionally prompt user to choose release group
-    * optionally keep iterating through release-groups if no Discogs genre found
+    * Optionally prompt user to choose release group.
+    * Optionally keep iterating through release-groups if no Discogs genre found.
 
 ## Suggestions
 Use Swinsian instead of iTunes for playback. The two dealbreakers are:
