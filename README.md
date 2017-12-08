@@ -35,23 +35,23 @@ There are two major online discography databases: Discogs and MusicBrainz. Both 
 The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called for any `.m4a`, `.aac`, and `.mp3` tags in your library. Uses `Mutagen` to write tags.
 
 Here's a play-by-play of what the metadata script does:
-2. Gets the artist ID from the filename-inferred artist name.
+1. Gets the artist ID from the filename-inferred artist name.
     * Asks for user input if artist-search has ambiguous (e.g. "Animals" vs. "The Animals").
     * Records user responses in a hidden file stored in the download location; so user only has to specify once.
-3. Runs strict search with artist ID of recordings, and filters recordings based on names. Makes sure the "meaningful words" in the discovered song names are identical to the user-specified song name.
+2. Runs strict search with artist ID of recordings, and filters recordings based on names. Makes sure the "meaningful words" in the discovered song names are identical to the user-specified song name.
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
-4. Gets release-groups from the release-list of each recording.
-5. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
-6. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
+3. Gets release-groups from the release-list of each recording.
+4. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
+5. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
     * Writes "The Wall" instead of "The Wall (anniversary edition)".
-7. Writes release-year from earliest year amongst all releases in *all release groups*.
+6. Writes release-year from earliest year amongst all releases in *all release groups*.
     * This gives the "actual" year of publication, not some random re-release or anniversary edition.
-8. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group.
+7. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group.
     * By choosing the most modern versions, we can get the nicest-looking cover art available.
     * Optionally, the script prompts user to choose release group.
-9. Gets genre from Discogs page of corresponding release-group, and from MusicBrainz.
+8. Gets genre from Discogs page of corresponding release-group, and from MusicBrainz.
     * Discogs has specific genre-fields corresponding to release-groups or "master"s. MusicBrainz only has "tags"
     associated with individual recordings, and there seems to be zero standardization there.
     * The metadata script attempts its own standardization of genre names, to avoid duplicates. Also very generic genres like "rock", "pop", "rap", or "country" are ignored.
