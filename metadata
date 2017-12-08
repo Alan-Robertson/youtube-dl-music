@@ -49,12 +49,16 @@ if not os.path.exists("config"):
 with open("config", "r") as file:
     config = file.readlines()
 config = [l.strip() for l in config]
-config = [l.split('=') for l in config] # tuples of pairs
+config = [l.split('=') for l in config if l!=''] # tuples of pairs
+if not all(len(t)==2 for t in config):
+    raise ValueError("Formatting error in config file. Lines must look like \"key = value\".")
 config = {t[0].strip(): t[1].strip() for t in config} # to dictionary
 if 'username' not in config or 'password' not in config:
-    raise ValueError("config file must include username/password for MusicBrainz database searching.")
+    raise ValueError("Cannot find MusicBrainz keys in config file. Add the lines \"username = <username>\" and "
+            "\"password = <password>\" to enable metadata tagging.")
 if 'token' not in config:
-    raise ValueError("config file must include token for discogs database searching.")
+    raise ValueError("Cannot find Discogs token in config file. Add the line \"token = <token>\" "
+            "to enable metadata tagging.")
 # Config MusicBrainz
 mb.auth(config['username'], config['password'])
 mb.set_useragent('Self', 'NA', contact=config.get('contact',''))
