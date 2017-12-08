@@ -32,7 +32,7 @@ There are two major online discography databases: Discogs and MusicBrainz. Both 
   * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
   * Create a MusicBrainz account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
 
-The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called for any `.m4a`, `.aac`, and `.mp3` tags in your library. Uses `Mutagen` to write tags.
+The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags.
 
 Here's a play-by-play of what the metadata script does:
 1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*.
