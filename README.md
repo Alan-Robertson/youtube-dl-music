@@ -6,9 +6,9 @@ script, you are breaking Youtube's Terms of Service (civil law). Then again, tha
 ## Overview
 This script downloads and saves audio from a youtube url into an aac/m4a file (the native
 format of youtube audio), applies metadata based on the user-input name, and normalizes the audio/volume.
-  * If you just want to download the m4a files and do nothing else, comment out
-      the parts below that adjust the volume/add metadata.
   * To change the download location, edit the `directory` variable.
+  * If you just want to download the m4a files and do nothing else, comment out
+      parts of the `youtube` script that adjust volume/add metadata.
   * If youtube-dl **stops working**, it is often because youtube.com has changed how they store
       video/audio. The youtube-dl developers are very active and usually will release an updated
       version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
