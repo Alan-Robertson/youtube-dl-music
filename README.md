@@ -14,14 +14,10 @@ format of youtube audio), applies metadata based on the user-input name, and nor
       version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 
 ## Requirements
-  * youtube-dl (`brew install youtube-dl` with Homebrew on Mac;
-      see github: https://github.com/rg3/youtube-dl)
-  * ffmpeg (`conda install ffmpeg` [any anaconda distribution],
-      or `brew install ffmpeg` with Homebrew on Mac)
-  * ffmpeg-normalize (python package for normalizing volume, requires ffmpeg accessible from shell;
-      `pip install ffmpeg-normalize`; see github: https://github.com/slhck/ffmpeg-normalize)
-  * mutagen (python package for writine metadata; `conda install mutagen`, `pip install mutagen`, etc;
-      see github: https://github.com/quodlibet/mutagen)
+  * [youtube-dl](https://github.com/rg3/youtube-dl) (script for downloading youtube media; `brew install youtube-dl` with Homebrew on Mac)
+  * [ffmpeg](https://github.com/FFmpeg/FFmpeg) (batteries-included package for creating/modifying media files; `conda install ffmpeg` [any anaconda distribution] or `pip install ffmpeg` or `brew install ffmpeg` [Homebrew on Mac])
+  * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize) (python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`)
+  * [mutagen](https://github.com/quodlibet/mutagen) (python package for writing metadata; `conda install mutagen` [any anaconda distribution] or `pip install mutagen`)
 
 ## Usage
 
@@ -33,9 +29,11 @@ is artist, everything to the right is title. Makes life easier when using media 
 
 ## Overview of metadata script
 There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
-  * Add lines that look like `key = value` to the "config" file to enable metadata tagging. Whitespace doesn't matter.
+  * Add lines that look like `key = value` to the "config" file to enable metadata tagging. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
   * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
   * Create a MusicBrainz account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
+
+The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called for any `.m4a`, `.aac`, and `.mp3` tags in your library. Uses `Mutagen` to write tags.
 
 Here's a play-by-play of what the metadata script does:
 1. Uses extra-strict search to narrow down artist and songnames (strict search still allows extra words; 
@@ -50,16 +48,21 @@ record user responses in a file.
 5. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
 6. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
     * Writes "The Wall" instead of "The Wall (anniversary edition)".
-7. Writes release-year from earliest year amongst all releases in *all release groups*
-8. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group
-and gets genre from Discogs page of corresponding release-group
-    * Optionally prompt user to choose release group.
-    * Optionally keep iterating through release-groups if no Discogs genre found.
+7. Writes release-year from earliest year amongst all releases in *all release groups*.
+    * This gives the "actual" year of publication, not some random re-release or anniversary edition.
+8. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group.
+    * By choosing the most modern versions, we can get the nicest-looking cover art available.
+    * Optionally, the script prompts user to choose release group.
+9. Gets genre from Discogs page of corresponding release-group, and from MusicBrainz.
+    * Discogs has specific genre-fields corresponding to release-groups or "master"s. MusicBrainz only has "tags"
+    associated with individual recordings, and there seems to be zero standardization there.
+    * The metadata script attempts its own standardization of genre names, to avoid duplicates. Also very generic genres like "rock", "pop", "rap", or "country" are ignored.
 
 ## Suggestions
 Use Swinsian instead of iTunes for playback. The two dealbreakers are:
-1) iTunes can't "watch" folders, and the only hope is some complicated/non-trivial hack involving with 
-the "Automatically add to iTunes" folder (which couldn't get to work; maybe have to close/re-open) 
-2) browsing between files is difficult (there is no filename table, and
-typing out the name of something to jump to that point in the list is, inexplicably, extremely slow)
+  1. iTunes can't "watch" folders, and the only hope is some complicated/non-trivial hack involving with 
+  the "Automatically add to iTunes" folder (which couldn't get to work; maybe have to close/re-open).
+  2. Browsing between files is difficult (cannot type out the name of an artist/song/filename and have
+  the cursor jump to that row [and when trying to do that, get inexplicable slowdown]; also there is no filename column).
+Swinsian costs \$20, but IMO it is really worth it.
 
