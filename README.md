@@ -33,9 +33,9 @@ is artist, everything to the right is title. Makes life easier when using media 
 
 ## Overview of metadata script
 There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
-  * Add `key=value` assignments to the "config" file to enable metadata tagging.
-  * Create a MusicBrainz account and create a token for the API; add that to the `config` file with `token=<your token here>`.
-  * Create a Discogs account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
+  * Add lines that look like `key = value` to the "config" file to enable metadata tagging. Whitespace doesn't matter.
+  * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
+  * Create a MusicBrainz account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
 
 Here's a play-by-play of what the metadata script does:
 1. Uses extra-strict search to narrow down artist and songnames (strict search still allows extra words; 
