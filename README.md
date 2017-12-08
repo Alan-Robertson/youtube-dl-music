@@ -35,14 +35,13 @@ There are two major online discography databases: Discogs and MusicBrainz. Both 
 The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called for any `.m4a`, `.aac`, and `.mp3` tags in your library. Uses `Mutagen` to write tags.
 
 Here's a play-by-play of what the metadata script does:
-1. Uses extra-strict search to narrow down artist and songnames (strict search still allows extra words; 
-so we make sure words are all identical). 
-2. Gets the artist ID (and asks for user input if artist-search has ambiguous (e.g. Animals vs. The Animals) and
-record user responses in a file.
-3. Runs strict search with artist ID of recordings, and filters recordings based on names.
+2. Gets the artist ID from the filename-inferred artist name.
+    * Asks for user input if artist-search has ambiguous (e.g. "Animals" vs. "The Animals").
+    * Records user responses in a hidden file stored in the download location; so user only has to specify once.
+3. Runs strict search with artist ID of recordings, and filters recordings based on names. Makes sure the "meaningful words" in the discovered song names are identical to the user-specified song name.
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
-    * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
+    * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
 4. Gets release-groups from the release-list of each recording.
 5. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
 6. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
