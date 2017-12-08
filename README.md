@@ -35,10 +35,10 @@ There are two major online discography databases: Discogs and MusicBrainz. Both 
 The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called for any `.m4a`, `.aac`, and `.mp3` tags in your library. Uses `Mutagen` to write tags.
 
 Here's a play-by-play of what the metadata script does:
-1. Gets the MusicBrainz artist ID from the filename-inferred artist name.
+1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*.
     * Asks for user input if artist-search has ambiguous (e.g. "Animals" vs. "The Animals").
     * Records user responses in a hidden file stored in the download location; so user only has to specify once.
-2. Searches MusicBrainz "recordings" under the artist ID by the filename-inferred song name. Makes sure "meaningful words" in the discovered recording names match the filename-inferred song name.
+2. Searches MusicBrainz "recordings" under the artist ID by the *filename-inferred song name*. Makes sure "meaningful words" in the discovered recording names match the filename-inferred song name.
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
