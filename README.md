@@ -37,7 +37,7 @@ You might ask why we do an artist search without also including the recording in
 
 <!-- You might ask why we do an artist search without also including the recording information? The answer is because of the limitations of the MusicBrainz API searching tools. If you want to name your file `Animals - Around and Around` then run a strict search of the datababase, you will get no results: the database thinks you want some obscure band called `Animals` and not the iconic British invasion band `The Animals`. Same goes for `Tom Petty` vs. `Tom Petty and the Heartbreakers` - most titles are under the latter, but if you want to name your files by the former, you will get no results. -->
 
-At least this was my thinking before. Now that I've sat down and spelled it out, I think I'm wrong... shouldn't strict artist search include searches with "extra words?" So maybe I can search artists and recordings all at once.
+<!-- At least this was my thinking before. Now that I've sat down and spelled it out, I think I'm wrong... shouldn't strict artist search include searches with "extra words?" So maybe I can search artists and recordings all at once. -->
 
 ## Overview of metadata script
 There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
