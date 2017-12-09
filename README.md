@@ -74,7 +74,7 @@ Here's a play-by-play of what the metadata script does:
 ## Suggestions for Playback Software
 ### On macOS
 Use Swinsian instead of iTunes for playback. The two dealbreakers for me were:
-  1. iTunes can't "watch" folders, and the only hope is some complicated hack involving 
+  1. iTunes can't "watch" folders while open (i.e. automatically add and remove songs as they appear/disappear from a folder). The only hope is some complicated hack involving 
   the "Automatically add to iTunes" folder (personally I couldn't get this to work; perhaps one must restart iTunes every time or tell it manually to rescan this folder).
   2. Browsing between files is difficult (cannot type out the name of an artist/song/filename and have
   the cursor jump to that row [and when trying to do that, get inexplicable slowdown]; also there is no filename column).
