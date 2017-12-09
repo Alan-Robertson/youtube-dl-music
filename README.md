@@ -14,7 +14,7 @@ format of youtube audio), applies metadata based on the user-input name, and nor
       version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 
 ## Dependencies
-  * python 3.6: script has f-strings, which is a python 3.6+ feature (f-strings are totally awesome and you should be using them (: ).
+  * python 3.6: `metadata` script has f-strings, which is a python 3.6+ feature (f-strings are totally awesome and you should be using them (: ).
   * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media; `brew install youtube-dl` (Homebrew on Mac).
   * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `pip install ffmpeg` or `brew install ffmpeg` (Homebrew on Mac).
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`.
