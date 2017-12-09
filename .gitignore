@@ -1,6 +1,10 @@
 # Sensitive content #
 #####################
-config
+config*
+metaconfig*
+metanoconfig*
+metalist*
+setup*
 
 # VIM extras #
 ##############

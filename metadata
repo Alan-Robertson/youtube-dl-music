@@ -43,12 +43,17 @@ for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
 #-------------------------------------------------------------------------------
 # Configure
 #-------------------------------------------------------------------------------
+# File names
+storage = os.path.dirname(os.path.realpath(__file__))
+config = f"{storage}/config"
+metaconfig = f"{storage}/metaconfig"
+metanoconfig = f"{storage}/metanoconfig"
 # Read config file
-if not os.path.exists("config"):
+if not os.path.exists(config):
     raise IOError("To get metadata, you must add fields to the config file.")
-with open("config", "r") as file:
+with open(config, "r") as file:
     config = file.readlines()
-config = [l.strip() for l in config]
+config = [l.strip().replace("\"",'').replace("'",'') for l in config]
 config = [l.split('=') for l in config if l!=''] # tuples of pairs
 if not all(len(t)==2 for t in config):
     raise ValueError("Formatting error in config file. Lines must look like \"key = value\".")
@@ -206,7 +211,7 @@ def yesno():
         else:
             print('Invalid choice.') 
 def roman(num):
-    """Roman numerals."""
+    """Generate list of roman numerals. Copied from stackoverflow."""
     roman = { 1000: 'm',
                900: 'cm',
                500: 'd',
@@ -383,7 +388,7 @@ def genres_discogs(rgid):
     print('Discogs genres:', genres)
     return genres
 
-def guess_genres(recordings):
+def genres_musicbrainz(recordings):
     """Gets the genres from the MusicBrainz tag-list associated with a list
     of recordings."""
     # First get list of tags, and create list of tag-count pairs
@@ -405,6 +410,26 @@ def guess_genres(recordings):
 def guess_artists(artistname):
     """Get artist id(s) from search; if ambiguous, request user input; allow multiple
     options if user not sure. Also will save user responses as lists."""
+    # Helper function for parsing user response
+    def parse(choices):
+        if len(choices)==0:
+            print('Invalid choice.')
+            return None
+        if choices=='0':
+            choices = [c+1 for c in range(len(artistl))]
+        else:
+            try: choices = [int(c) for c in choices.split(',')]
+            except TypeError:
+                print('Input must be integer.')
+                return None
+        # Make sure they are all in valid range
+        if any(c<0 for c in choices):
+            print('Integer must be >=0.')
+            return None
+        if any(c>len(artistl) for c in choices):
+            print(f'Integer must be <={len(artistl)}.')
+            return None
+        return choices
     # artistl = mb.search_artists(artist)['artist-list'] # this is usually well-behaved;
     # First get list of artists to search for
     offset = 0
@@ -444,43 +469,36 @@ def guess_artists(artistname):
     if len(artistl)==1: # make sure we are getting right artist (multiple with same name?)
         artistds = artistl[:1]
     else:
+        print([artistd.get('id') for artistd in artistl])
         # Message
         for i,artist in enumerate(artistl[:20]):
             print(f"{i+1:d} ({artist.get('ext:score','0')}): {artist.get('name','')} "
                     f"({artist.get('disambiguation','')})")
-        # Helper function for parsing user response
-        def parse(choices):
-            if len(choices)==0:
-                print('Invalid choice.')
-                return None
-            if choices=='0':
-                choices = [c+1 for c in range(len(artistl))]
-            else:
-                try: choices = [int(c) for c in choices.split(',')]
-                except TypeError:
-                    print('Input must be integer.')
-                    return None
-            # Make sure they are all in valid range
-            if any(c<0 for c in choices):
-                print('Integer must be >=0.')
-                return None
-            if any(c>len(artistl) for c in choices):
-                print(f'Integer must be <={len(artistl)}.')
-                return None
-            return choices
         # Load the config file, and see if a previous response is in there
-        try: df = pd.read_csv('.metaconfig', index_col=0, header=0, dtype=str)
+        try: df = pd.read_csv(metaconfig, index_col=0, header=0, dtype=str)
         except FileNotFoundError:
             df = pd.DataFrame(index=[], columns=['choice'])
         # Load previous user resposne
         if artistname in df.index.values:
-            choices = df.loc[artistname].values[0] # where name matches artistname
-            choices = parse(choices) # get response
-            print(f'Loaded previous response: {choices}.')
-        # Print message if user doesn't want to select right now
-        elif noconfirmartist:
-            # Or just append this name to a list of 
-            with open('.metalist','a+') as file: # a opens for reading/writing, creates if not exist, goes to end
+            ids = df.loc[artistname].values[0].split(',') # list of ids user chose
+            artistds = [artistd for artistd in artistl if artistd.get('id','') in ids]
+            choices = [c+1 for c,artistd in enumerate(artistl) if artistd.get('id','') in ids]
+            print(f'Loaded previous response: {choices}.') # the last choices
+        # Get and save user response
+        elif not noconfirmartist:
+            # User response
+            while True:
+                choices = input('Which artist number(s) should we use (if not sure, input comma-separated list)?')
+                choices = parse(choices)
+                if choices is not None:
+                    ids = ','.join(artistl[c-1].get('id','') for c in choices)
+                    df.loc[artistname] = ids # add ids to dataframe
+                    df.to_csv(metaconfig)
+                    break # else keep trying until get valid response
+            artistds = [artistl[c-1] for c in choices]
+        else: # Or just append this name to a list of items we could not tag
+            # And maybe user can get back to them later
+            with open(metanoconfig,'a+') as file: # a opens for reading/writing, creates if not exist, goes to end
                 file.seek(0) # back to beginning
                 lines = [line.rstrip('\n') for line in file]
                 if artistname not in lines:
@@ -488,17 +506,6 @@ def guess_artists(artistname):
                     file.write(f"{artistname}\n")
             print('Artist name was ambiguous :(')
             exit()
-        # Get and save user response
-        else:
-            # User response
-            while True:
-                choices = input('Which artist number(s) should we use (if not sure, input comma-separated list)?')
-                df.loc[artistname] = str(choices) # add to dataframe
-                choices = parse(choices)
-                if choices is not None:
-                    df.to_csv('.metaconfig')
-                    break
-        artistds = [artistl[c-1] for c in choices]
     # artistnames = [artistd.get('name','') for artistd in artistds]
     # artistids = [artistd.get('id','') for artistd in artistds]
     # artist = artistnames[0] # will label automatically by first one user
@@ -738,13 +745,13 @@ def guess_album(recordings):
                         # to new ones if cannot be found
                         if genreonly:
                             image = None
-                            genres = genres_discogs(group['id']) + guess_genres(group['recordings'])
+                            genres = genres_discogs(group['id']) + genres_musicbrainz(group['recordings'])
                             genres = list(set(genres))
                             if len(genres)==0:
                                 continue
                         else:
                             image = guess_artwork(group['releases'])
-                            genres = genres_discogs(group['id']) + guess_genres(group['recordings'])
+                            genres = genres_discogs(group['id']) + genres_musicbrainz(group['recordings'])
                             genres = list(set(genres))
                             if image is None:
                                 print("No album artwork available.")
