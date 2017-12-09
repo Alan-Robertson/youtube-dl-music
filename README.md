@@ -72,7 +72,7 @@ Here's a play-by-play of what the metadata script does:
     * The metadata script attempts its own standardization of genre names, to avoid duplicates. Also very generic genres like "rock", "pop", "rap", or "country" are ignored.
 
 ## Suggestions for Playback Software
-### On madOS
+### On macOS
 Use Swinsian instead of iTunes for playback. The two dealbreakers for me were:
   1. iTunes can't "watch" folders, and the only hope is some complicated hack involving 
   the "Automatically add to iTunes" folder (personally I couldn't get this to work; perhaps one must restart iTunes every time or tell it manually to rescan this folder).
