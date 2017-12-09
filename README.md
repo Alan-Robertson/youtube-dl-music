@@ -28,6 +28,11 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
 filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
+## Philosophy of metadata script
+This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloaded is pretty darn fast.
+
+Instead, it is designed to **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate.
+
 ## Overview of metadata script
 There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
   * Add lines that look like `key = value` to the "config" file to enable metadata tagging. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
