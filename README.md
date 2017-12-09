@@ -38,7 +38,7 @@ Here's a play-by-play of what the metadata script does:
 1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*. Search is strict, but a few exceptions.
     * Allows for names starting with or without "the" (e.g. "Animals" vs. "The Animals" -- you can choose to forego the "the", and this way the music in your filesystem will be sorted more naturally).
     * Allows for names ending with "&" or "and" something (e.g. "Tom Petty *and the Heartbreakers*").
-    * Asks for user input if artist-search returns ambiguous results.
+    * Asks for user input if artist-search returns ambiguous results. Includes available *disambiguation* metadata in parentheses.
     * Records user responses in a hidden file stored in the download location; so user only has to specify once.
 2. Searches MusicBrainz "recordings" under the artist ID by the *filename-inferred song name*. Makes sure "meaningful words" in the discovered recording names match the filename-inferred song name. Some examples:
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
