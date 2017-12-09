@@ -71,11 +71,14 @@ Here's a play-by-play of what the metadata script does:
     associated with individual recordings, and there seems to be zero standardization there.
     * The metadata script attempts its own standardization of genre names, to avoid duplicates. Also very generic genres like "rock", "pop", "rap", or "country" are ignored.
 
-## Suggestions
-Use Swinsian instead of iTunes for playback. The two dealbreakers are:
-  1. iTunes can't "watch" folders, and the only hope is some complicated/non-trivial hack involving with 
-  the "Automatically add to iTunes" folder (which couldn't get to work; maybe have to close/re-open).
+## Suggestions for Playback Software
+### On madOS
+Use Swinsian instead of iTunes for playback. The two dealbreakers for me were:
+  1. iTunes can't "watch" folders, and the only hope is some complicated hack involving 
+  the "Automatically add to iTunes" folder (personally I couldn't get this to work; perhaps one must restart iTunes every time or tell it manually to rescan this folder).
   2. Browsing between files is difficult (cannot type out the name of an artist/song/filename and have
   the cursor jump to that row [and when trying to do that, get inexplicable slowdown]; also there is no filename column).
 Swinsian costs \$20, but IMO it is really worth it.
+### On Windows
+Use `foobar2000`. It looks pretty ugly out of the box, but it is free, it is lighting fast, and you can use custom themes that make it look pretty slick. It's packed with useful features, too. Unfortunately this app is not available for macOS.
 
