@@ -37,7 +37,7 @@ You might ask: why do we run an artist search without also including the recordi
 <!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
 <!-- be some *rare, but very real* situations where the search  -->
 
-However, if I can figure out a way to automatically figure out these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare. In future, may run search together, and then **only ask for user response if have more than one artist IDs in the artist-credit list**.
+However, if I can figure out a way to automatically filter these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare. In future, may run search together, and then **only ask for user response if have more than one artist ID in the artist-credit list**.
 <!-- And actually having trouble finding these purported false positives... maybe I'm crazy and they don't exist. But if a `Tom Petty` search returns `Tom Petty and the Heartbreakers` we should also have `Beatles` search returning `The Beatles Tribute`, with potentially identical recording names. -->
 
 <!-- So, it may be better to have the user explicitly confirm the artist using disambiguation information. Though this needs more testing - if I can't find any examples, may just forget it. -->
@@ -53,31 +53,27 @@ There are two major online discography databases: Discogs and MusicBrainz. Both 
   * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
   * Create a MusicBrainz account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
 
-The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags.
+The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags; `mp3` metadata is added to the ID3 header, while `m4a` metadata is added in some mysterious way that Apple pioneered, but should still be readable by most media players.
 
 Here's a play-by-play of what the metadata script does:
-1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*. Search is strict, but a few exceptions.
-    * Allows for names starting with or without "the" (e.g. "Animals" vs. "The Animals" -- you can choose to forego the "the", and this way the music in your filesystem will be sorted more naturally).
+<!-- 1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*. Search is strict, but a few exceptions. -->
+1. Run strict search of MusicBrainz "recordings" matching the *filename-inferred* track name and with artist credits matching the *filename-inferred* artist name. Choose the first credit artist, and ask for user input if the first credit artists in the release list differ.
+    * Allows for names starting with or without "the" (e.g. "Animals" vs. "The Animals" - you can choose to forego the "the", and this way the music in your filesystem will be sorted more naturally).
     * Allows for names ending with "&" or "and" something (e.g. "Tom Petty *and the Heartbreakers*").
-    * Asks for user input if artist-search returns more than one option. Includes available *disambiguation* metadata in parentheses.
-    * Records user responses in a hidden file stored in the download location; so user only has to specify once.
-2. Searches MusicBrainz "recordings" under the artist ID by the *filename-inferred song name*. Makes sure "meaningful words" in the discovered recording names match the filename-inferred song name. Some examples:
+    * Write "artist" metadata according to the search results.
+2. Verify the recordings returned, eliminate some matches but permit others. In general, make sure "meaningful words" in the discovered recording names match the filename-inferred song name.
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
-3. Gets release-groups from the release-list of each recording.
-4. Groups the recordings into their corresponding release-groups (we might have in our list the same recording IDs from different releases/release groups).
-5. Writes release-name title from shortest titles amongst all releases in the *chosen release group*.
-    * Writes "The Wall" instead of "The Wall (anniversary edition)".
-6. Writes release-year from earliest year amongst all releases in *all release groups*.
-    * This gives the "actual" year of publication, not some random re-release or anniversary edition.
-7. Writes cover-art from most *modern* release and most *modern* release format amongst releases in release group.
-    * By choosing the most modern versions, we can get the nicest-looking cover art available.
-    * Optionally, the script prompts user to choose release group.
-8. Gets genre from Discogs page of corresponding release-group, and from MusicBrainz.
-    * Discogs has specific genre-fields corresponding to release-groups or "master"s. MusicBrainz only has "tags"
-    associated with individual recordings, and there seems to be zero standardization there.
-    * The metadata script attempts its own standardization of genre names, to avoid duplicates. Also very generic genres like "rock", "pop", "rap", or "country" are ignored.
+    * Write "title" metadata according to the search results (**TODO**).
+3. Gets release "groups" from the release list belonging to each recording, and consolidates the recordings (sorted by unique ID) by their release groups. Then choose the release group.
+    * Sort the release groups first according to a clever ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
+    * Prompt user to confirm a release group unless `--noconfirm` was passed. User will see some metadata associated with the release group.
+4. Now get several *album-related* metadata categories from our releases under the ordered hierarchy of release groups.
+    * Write "year" metadata from the earliest release amongst all members of *all* release groups, *not just the chosen one*. User may choose a different release group because the first choice has bad cover art, but we want to know the "original" year of production overall.
+    * Write "album name" metadata from the earliest release amongst all members of the *chosen* release group. We want the album name to correspond correctly with the cover (**TODO**).
+    * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in release group. This gets the nicest-looking cover art available.
+    * Write "genres" from Discogs page of corresponding "master" by searching the MusicBrainz `html` webpage for a linked Discogs "master" ID (not currently implemented in the python API). Also write "genres" from the MusicBrainz "tags" associated with individual recordings (the "tags" have comparatively poor standarization, and so are heavily filtered first). In each case, useless, overly generic genres like "rock", "pop", "rap", and "country" are ignored -- we want genres like "alternative rock" and "indie pop".
 
 ## Suggestions for Playback Software
 ### On macOS
