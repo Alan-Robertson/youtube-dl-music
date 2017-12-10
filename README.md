@@ -11,6 +11,7 @@ You need to create a file named `config` in the same directory as the `metadata`
   * Add to `config` the line `directory = <your music folder here>` to set the download location.
   * Create a Discogs account and create a token for the API; add that to `config` with `token=<your token here>`.
   * Create a MusicBrainz account and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
+
 Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
 
 If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The youtube-dl developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
