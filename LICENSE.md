@@ -1,5 +1,4 @@
 The MIT License
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](lukelbd@gmail.com)
 
 Copyright (c) 2017 Luke L. B. Davis
 
