@@ -65,6 +65,7 @@ Here's a play-by-play of what the metadata script does:
     * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
+    * Allows "Hush / I'm Alive" in search for "Hush" by choosing optional match on stuff either side of "/".
     * Write "title" metadata according to the search results (**TODO**).
 3. Get release "groups" from the release list belonging to each recording, and consolidate the recordings (sorted by unique ID) into their corresponding release groups. Then choose a release group for gathering information.
     * Sort the release groups first according to a clever ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
