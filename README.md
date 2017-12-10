@@ -5,13 +5,17 @@ script, you are breaking Youtube's Terms of Service (civil law). Then again, tha
 
 ## Overview
 This script downloads and saves audio from a youtube url into an aac/m4a file (the native
-format of youtube audio), applies metadata based on the user-input name, and normalizes the audio/volume.
-  * To change the download location, edit the `directory` variable.
-  * If you just want to download the m4a files and do nothing else, comment out
-      parts of the `youtube` script that adjust volume/add metadata.
-  * If youtube-dl **stops working**, it is often because youtube.com has changed how they store
-      video/audio. The youtube-dl developers are very active and usually will release an updated
-      version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
+format of youtube audio) using `youtube-dl`, normalizes the audio/volume using `ffmpeg-normalize`, and applied metadata based on the user-input filename using the created `metadata` script.
+
+You need to create a file named `config` in the same directory as the `metadata` and `youtube` scripts before they can be used. You will add lines that look like `key = value`. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
+  * Add to `config` the line `directory = <your music folder here>` to set the download location.
+  * Create a Discogs account and create a token for the API; add that to `config` with `token=<your token here>`.
+  * Create a MusicBrainz account and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
+Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
+
+If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The youtube-dl developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
+
+If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata.
 
 ## Dependencies
   * access to a UNIX shell.
@@ -27,12 +31,6 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 
 Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
 filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
-
-You need to create a file named `config` in the same directory as the `metadata` script before it can be used. There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
-  * Add lines that look like `key = value` to `config` to enable metadata tagging. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
-  * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
-  * Create a MusicBrainz account and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
-
 
 ## Usage of metadata script
 The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existing files. Usage is as follows:
