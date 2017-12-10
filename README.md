@@ -34,8 +34,8 @@ The metadata script is called automatically by `youtube` but you may want to use
     metadata <flags> <filename(s)>
 
 This time the filename(s) must have escaped spaces. The following flag options are available:
-* `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
 * `--debug`: Echo some extra information during downloading process.
+* `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
 * `--noconfirm`: Do not prompt user to confirm the release group. The `youtube` script uses this flag but the thinking is, if a user calls metadata manually, they may want more control.
 * `--nofilter`: Do not filter recordings by name.
 * `--noconfig`: Do not read previous user responses to ambiguous artist names from the config file.
