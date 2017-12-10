@@ -1,7 +1,11 @@
 #!/bin/bash
+# This function is a simple wrapper around some useful open-source command-line
+# tools to download and normalize youtube audio into the AAC (extension .m4a) format;
+# we choose this format because it matches the compression of .mp3 but has much improved
+# audio quality at similar bitrate. Also runs the file through a python metadata-tagging script.
 
 # Download directory; default is where I keep my music
-directory="~/Google\ Drive/Playlist"
+directory="~/Google Drive/Playlist"
 
 # Initial stuff
 directory="${directory/"~"/$HOME}" # don't expand spaces, but expand ~
@@ -32,12 +36,12 @@ echo "Normalizing volume to -26dB."
 ffmpeg-normalize -uf -a aac "$path"
   # -a specifies audiocodec; see help info, this is wav file (ideal sense we don't want to recompress the raw data)
 mv "$directory/normalized-$name.m4a" "$path"
-
-# Normalize output and get raw WAV data (much more space)
+# Normalize output and get raw WAV data (unfortunately WAV is impossible to tag :( )
 # ffmpeg-normalize "$directory/$name.m4a"
 # mv "$directory/normalized-$name.wav" "$directory/$name.wav"
 # rm "$path"
 
 # Change metadata using python function
-metadata --noconfirmalbum "$url" "$path"
+# Do this quickly, so don't ask for user confirmation
+metadata --noconfirm --url="$url" "$path"
 
