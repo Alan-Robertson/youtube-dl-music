@@ -384,8 +384,8 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             ids = ','.join(uqartists[c-1].get('id','') for c in choices)
             df.loc[artist] = ids # add ids to dataframe
             df.to_csv(metaconfig)
-    recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
-        if recartistid in ids] # make sure they are in user-selected choice
+        recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
+            if recartistid in ids] # make sure they are in user-selected choice
     # Filter out bad/unwanted recordings first
     # Translate recordings, so no rejection due to capitalization/punctuation
     if not options['nofilter']:
