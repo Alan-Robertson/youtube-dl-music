@@ -69,7 +69,7 @@ Here's a play-by-play of what the metadata script does:
 3. Get release "groups" from the release list belonging to each recording, and consolidate the recordings (sorted by unique ID) into their corresponding release groups. Then choose a release group for gathering information.
     * Sort the release groups first according to a clever ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
     * Prompt user to confirm a release group unless `--noconfirm` was passed. User will see some metadata associated with the release group.
-4. Get several *album-related* metadata categories from our releases under the ordered hierarchy of release groups.
+4. Get several *album-related* metadata categories from our ordered hierarchy of releases belonging to unique release groups.
     * Write "year" metadata from the earliest release amongst all members of *all* release groups, *not just the chosen one*. User may choose a different release group because the first choice has bad cover art, but we want to know the "original" year of production overall.
     * Write "album name" metadata from the earliest release amongst all members of the *chosen* release group. We want the album name to correspond correctly with the cover (**TODO**).
     * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in release group. This gets the nicest-looking cover art available.
