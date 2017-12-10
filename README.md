@@ -28,8 +28,14 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
 filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
+You need to create a file named `config` in the same directory as the `metadata` script before it can be used. There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
+  * Add lines that look like `key = value` to `config` to enable metadata tagging. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
+  * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
+  * Create a MusicBrainz account and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
+
+
 ## Usage of metadata script
-The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existin files. Usage is as follows:
+The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existing files. Usage is as follows:
 
     metadata <flags> <filename(s)>
 
@@ -41,16 +47,14 @@ This time the filename(s) must have escaped spaces. The following flag options a
 * `--noconfig`: Do not read previous user responses to ambiguous artist names from the config file.
 * `--genreonly`: Only add genre metadata, nothing else. Because this functionatlity can be grealy improved, this flag was added as a way to quickly test things.
 
-## Philosophy of metadata script
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
 
 Instead, it is designed to **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate.
 
-You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want.
+<!-- You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want. -->
 <!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
 <!-- be some *rare, but very real* situations where the search  -->
-
-However, if I can figure out a way to automatically filter these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare. In future, may run search together, and then **only ask for user response if have more than one artist ID in the artist-credit list**.
+<!-- However, if I can figure out a way to automatically filter these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare. In future, may run search together, and then **only ask for user response if have more than one artist ID in the artist-credit list**. -->
 <!-- And actually having trouble finding these purported false positives... maybe I'm crazy and they don't exist. But if a `Tom Petty` search returns `Tom Petty and the Heartbreakers` we should also have `Beatles` search returning `The Beatles Tribute`, with potentially identical recording names. -->
 
 <!-- So, it may be better to have the user explicitly confirm the artist using disambiguation information. Though this needs more testing - if I can't find any examples, may just forget it. -->
@@ -61,11 +65,6 @@ However, if I can figure out a way to automatically filter these rare polluted m
 <!-- At least this was my thinking before. Now that I've sat down and spelled it out, I think I'm wrong... shouldn't strict artist search include searches with "extra words?" So maybe I can search artists and recordings all at once. -->
 
 ## Overview of metadata script
-There are two major online discography databases: Discogs and MusicBrainz. Both have their strengths and weaknesses, and both have python APIs. So, why don't we use both? :)
-  * Add lines that look like `key = value` to the "config" file to enable metadata tagging. Whitespace doesn't matter, and single/double quotes are allowed but not necessary.
-  * Create a Discogs account and create a token for the API; add that to the `config` file with `token=<your token here>`.
-  * Create a MusicBrainz account and you can simply use your account username and password; add them to the `config` file with `username=<your username here>` and `password=<your password here>`.
-
 The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags; `mp3` metadata is added to the ID3 header, while `m4a` metadata is added in some mysterious way that Apple pioneered, but should still be readable by most media players.
 
 Here's a play-by-play of what the metadata script does:
