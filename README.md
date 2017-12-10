@@ -39,7 +39,7 @@ This time the filename(s) must have escaped spaces. The following flag options a
 * `--noconfirm`: Do not prompt user to confirm the release group. The `youtube` script uses this flag but the thinking is, if a user calls metadata manually, they may want more control.
 * `--nofilter`: Do not filter recordings by name.
 * `--noconfig`: Do not read previous user responses to ambiguous artist names from the config file.
-* `--genreonly`: Only add genre metadata, nothing else. Because the genre addition still has much room for improvement this was included for testing.
+* `--genreonly`: Only add genre metadata, nothing else. Because this functionatlity can be grealy improved, this flag was added as a way to quickly test things.
 
 ## Philosophy of metadata script
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
