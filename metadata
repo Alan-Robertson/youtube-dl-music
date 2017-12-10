@@ -74,6 +74,16 @@ client = discogs_client.Client('Personal', user_token=config['token'])
 ################################################################################
 # Helper functions
 ################################################################################
+def yesno():
+    # Requests user yse/no input and parses
+    while True: # just keep going until get valid one
+        response = input('Confirm (y/n)?')
+        if len(response)>0:
+            if response[0].lower()=='n':
+                return False # continue?
+            elif response[0].lower()=='y':
+                return True # continue?
+        print('Invalid choice.') 
 
 ################################################################################
 # Main functions for pulling data
@@ -82,7 +92,7 @@ def genres_translate(genres, N=3):
     """Translations. Can deal with ambiguous tag names in MusicBrainz database
     and parse out some undesirable Discogs labels."""
     if options['debug']:
-        print('Genres listed (ORIGINAL):')
+        print('Genres recovered from Discogs and MusicBrainz:')
         for genre,count in genres:
             print(f"{genre}: {count:d}")
     # Run basic translations, so no duplicates of slightly different things
@@ -149,7 +159,7 @@ def genres_translate(genres, N=3):
             '00','90','80','70','60','50','40','30','10','20'] # these aren't even genres; some have them listed
     ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
     if options['debug']:
-        print('Genres listed (BEFORE):')
+        print('Genres after translation:')
         for genre,count in genres:
             print(f"{genre}: {count:d}")
     genres = [genre for genre in genres # iterate through pairs
@@ -160,7 +170,7 @@ def genres_translate(genres, N=3):
             and not any(i==genre[0] for i in ignorematch) # will catch exact matches
             and genre[1]>0] # make sure at least one count
     if options['debug']:
-        print('Genres listed (AFTER):')
+        print('Genres after filter on the translations:')
         for genre,count in genres:
             print(f"{genre}: {count:d}")
     # Save genres
@@ -250,16 +260,6 @@ def guess_artwork(releases):
     """Gets album artwork. Note country is tricky; often japanese releases have 
     japenese text on them, but seems that European release are usually good and sometimes
     are the only available digital copies. Maybe just ignore asian countries?"""
-    def yesno():
-        # Requests user yse/no input and parses
-        while True: # just keep going until get valid one
-            response = input('Confirm (y/n)?')
-            if len(response)>0:
-                if response[0].lower()=='n':
-                    return False # continue?
-                elif response[0].lower()=='y':
-                    return True # continue?
-            print('Invalid choice.') 
     # First, go by release medium
     years = [int(release.get('date','0001')[:4]) for release in releases]
     media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
@@ -290,12 +290,11 @@ def guess_artwork(releases):
                     # User input
                     rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
                     rcountry, rtitle = release.get('country',''), release.get('title','')
-                    print(f"Trying year {year}, media '{', '.join(rmedia)}', country '{rcountry}', "
-                            f"title '{rtitle}'.",
+                    print(f"Trying year {year}, media '{', '.join(rmedia)}', "\
+                            f"country '{rcountry}', title '{rtitle}'.",
                             end='' if options['noconfirm'] else ' ')
-                    if not options['noconfirm']:
-                        if not yesno():
-                            continue
+                    if options['noconfirm'] or not yesno():
+                        continue
                     # Pull artwork
                     try: 
                         data = mb.get_image_front(release.get('id',''))
@@ -303,9 +302,9 @@ def guess_artwork(releases):
                         continue
                     # Manipulate
                     image = Image.open(BytesIO(data))
-                    print(f"Initial image shape: {image.size[0]} x {image.size[1]}")
+                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping"\
+                            "to square if not equal.")
                     if image.size[0]!=image.size[1]:
-                        print('Warping image to square...')
                         sqsize = min(image.size)
                         image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
                         data = BytesIO()
@@ -326,8 +325,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             istring = re.sub(r"\(.*\)"," ",istring) # delete stuff in parentheses
             istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
             iwords += [[w for w in istring.lower().split()
-                if w not in ignorew and len(w)>1]] # ignore single letters
-        print(iwords)
+                if w!='the' and len(w)>1]] # ignore single letters
         return iwords
     def parse(choices, N): # N is max possible number
         # Helper function for parsing user response
@@ -374,14 +372,14 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         try: df = pd.read_csv(metaconfig, index_col=0, header=0, dtype=str)
         except FileNotFoundError:
             df = pd.DataFrame(index=[], columns=['choice'])
-        if artist in df.index.values: # load previous user response
+        if not options['noconfig'] and artist in df.index.values: # load previous user response
             ids = df.loc[artist].values[0].split(',') # list of ids user chose
             choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
             print(f'Loaded previous response: {choices}.') # the last choices
         else: # get and save user response
             choices = None # initialize with this
             while choices is None: # if None there was error, and loop will repeat
-                choices = input('Which artist number(s) should we use (if not sure, input comma-separated list)?')
+                choices = input('Which artist number(s) should we use (enter 0 for all)?')
                 choices = parse(choices, len(uqartists)) # returns None on error
             ids = ','.join(uqartists[c-1].get('id','') for c in choices)
             df.loc[artist] = ids # add ids to dataframe
@@ -412,6 +410,7 @@ def guess_album(recordings):
     recordings = [recording for recording in recordings for release in recording.get('release-list',[])]
         # keep the recordings in-tact
     # Get families of releases belonging to release groups
+    # This stuff is complicated and I don't want to look at it again
     groups = []
     rgroupids = [release.get('release-group',{}).get('id','') for release in releases] # 1:1 correspondance with above
     uniqueidxs = [rgroupids.index(r) for r in set(rgroupids)] # unique indices
@@ -436,7 +435,14 @@ def guess_album(recordings):
         group['recordings'] = grecordings
         groups.append(group)
     print(f"{len(releases):d} releases consolidated into {len(groups)} release groups.")
-    # Add some extra info, including year of first album release
+    # Figure out the best title to write to file; generally the title corresponding to earliest
+    # release year should be a good bet; don't get it from same release as album art (might be another language)
+    titles = [release.get('title','') for group in groups for release in group['releases']]
+    tyears = [int(release.get('date','9999')[:4]) for group in groups for release in group['releases']]
+    title = titles[tyears.index(min(tyears))] # and that's that!
+    year = str(min(y for y in tyears if y>1900)) if len(tyears)>1 else "" # and that's our year!
+    # Get some extra information: first and last years of release for releases in each relase group,
+    # and the number of release in each group. Will use these later.
     year1s = [min(int(release.get('date','9999')[:4]) for release in group['releases']) for group in groups]
     yearfs = [max(int(release.get('date','0001')[:4]) for release in group['releases']) for group in groups]
     year1s = [9999 if year<1900 else year for year in year1s] # saw a year=1 once (inexplicably)
@@ -447,8 +453,6 @@ def guess_album(recordings):
         group['yearf'] = yearf
         group['count'] = count
         group['titles'] = list(set(release.get('title','') for release in group['releases']))
-    # Get year of release from everything, will save this
-    year = 9999 if len(year1s)==0 else f"{min(year1s):d}" # save this one as metadata
     # for year1 in sorted(set(group['year1'] for group in groups)):
     #     groupsA = [group for group in groups if group['year1']==year1]
     #     # Sort by release type
@@ -472,7 +476,7 @@ def guess_album(recordings):
     #                 groupsC = [group for group in groupsB if group['year1']==year1]
     # Get some helper info: need to sort groups by earliest 'official' release year among its release
     # members, and by its type (album vs. single, etc.)
-    firstround = True # first round? if so record some data for the backup return
+    backupdata = None # empty by default
     type_prefs_grouped = (['Album','Single'],['EP'],['Compilation','Other','Soundtrack','NA'],['Live']) #,('Live',)):
     anglo_countries = ['XW','XE','US','GB','AU','CA','IE'] # have seen "unknown" country show up as japanese/korean
     for type_prefs in type_prefs_grouped:
@@ -487,16 +491,8 @@ def guess_album(recordings):
                         # Confirm user wants to use this album
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
                             f"count {group['count']}, earliest year '{group['year1']}', latest year '{group['yearf']}'")
-                        if options['noconfirm'] or yesno():
+                        if options['noconfirm'] or not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
-                        # Get the album title
-                        countries = [release.get('country','NA') for release in group['releases']]
-                        titles = [release.get('title','') for country,release in zip(countries,group['releases'])
-                            if country in anglo_countries and len(release.get('title',''))>0] # want english names
-                        titles = [title for title in titles if title!=''] # ignore empty strings
-                        titlelengths = [len(title) for title in titles] # short better
-                        title = '' if len(titles)==0 else titles[titlelengths.index(min(titlelengths))]
-                        if options['debug']: print(title)
                         # Get the genres
                         groupid = group['id'] # save the id
                         genres = list(set(genres_discogs(groupid)+genres_musicbrainz(group['recordings'])))
@@ -504,32 +500,30 @@ def guess_album(recordings):
                             continue
                         # Backup data; use if can't find any images
                         metadata = {'id':groupid, 'genres':genres,
-                            'title':title, 'year':year, 'image':image}
-                        if firstround:
-                            firstround = False
+                            'title':title, 'year':year, 'image':None}
+                        print(metadata)
+                        if backupdata is None:
                             backupdata = metadata
                         # Get album art
-                        image = None
                         if not options['genreonly']:
                             image = guess_artwork(group['releases'])
                             if image is None:
                                 print("No album artwork available.")
                                 continue
+                        metadata.update({'image':image})
                         return metadata
     print('Failed to find album artwork.')
-    return {'id':groupid, 'genres':genres,
-            'title':title, 'year':yearsave, 'image':image}
+    if backupdata is None:
+        raise ValueError("No metadata to write.")
+    return backupdata
 
-################################################################################
-# Run this if called from command line; don't want this stuff run on import
-# This gives user ability to play with the other functions
-################################################################################
 if __name__ == "__main__":
     ############################################################################
     # Parse all command-line arguments
     ############################################################################
     url = '' # by default, write nothing
-    options = ['nofilter', 'genreonly', 'debug', 'noconfirm', 'noconfirmartist']
+    options = ['nofilter', 'genreonly', 'debug', 
+            'noconfirm', 'noconfig']
     options = {option: False for option in options} # the default settings
     filepath = []
     for arg in sys.argv[1:]:
