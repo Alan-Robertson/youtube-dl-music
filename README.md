@@ -37,7 +37,7 @@ You might ask: why do we run an artist search without also including the recordi
 <!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
 <!-- be some *rare, but very real* situations where the search  -->
 
-However, if I can figure out a way to automatically figure out these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare.
+However, if I can figure out a way to automatically figure out these rare polluted matches, I may stop making the user confirm the artist ID with manual input. And they are indeed extremely rare. In future, may run search together, and then **only ask for user response if have more than one artist IDs in the artist-credit list**.
 <!-- And actually having trouble finding these purported false positives... maybe I'm crazy and they don't exist. But if a `Tom Petty` search returns `Tom Petty and the Heartbreakers` we should also have `Beatles` search returning `The Beatles Tribute`, with potentially identical recording names. -->
 
 <!-- So, it may be better to have the user explicitly confirm the artist using disambiguation information. Though this needs more testing - if I can't find any examples, may just forget it. -->
