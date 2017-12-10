@@ -75,7 +75,9 @@ client = discogs_client.Client('Personal', user_token=config['token'])
 # Helper functions
 ################################################################################
 def yesno():
-    # Requests user yse/no input and parses
+    # Requests user yes/no input and parses
+    if options['noconfirm']:
+        return True
     while True: # just keep going until get valid one
         response = input('Confirm (y/n)?')
         if len(response)>0:
@@ -84,234 +86,19 @@ def yesno():
             elif response[0].lower()=='y':
                 return True # continue?
         print('Invalid choice.') 
+def geturl(page):
+    # Gets URL data from HTML lines
+    start_link = page.find("a href")
+    if start_link == -1:
+        return None, 0
+    start_quote = page.find('"', start_link)
+    end_quote = page.find('"', start_quote + 1)
+    url = page[start_quote + 1: end_quote]
+    return url, end_quote
 
 ################################################################################
-# Main functions for pulling data
+# Function to get recording data from just the simple artist-recording names
 ################################################################################
-def genres_translate(genres, N=3):
-    """Translations. Can deal with ambiguous tag names in MusicBrainz database
-    and parse out some undesirable Discogs labels."""
-    if options['debug']:
-        print('Genres recovered from Discogs and MusicBrainz:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
-    # Run basic translations, so no duplicates of slightly different things
-    badids, newgenres = [], []
-    for g,genre in enumerate(genres):
-        # Translations
-        genre[0] = genre[0].lower() # ensure lower-case
-        genre[0] = genre[0].replace('alt-','alternative ') # consistent spelling
-        genre[0] = genre[0].replace('alt ','alternative ')
-        genre[0] = genre[0].replace('classic','') # sometimes get <something> classic rock
-        genre[0] = genre[0].replace('adult','') # always thought these were weird...
-        genre[0] = genre[0].replace('aor','album') # album-oriented-rock to album-rock
-        genre[0] = genre[0].replace('&',' and ')
-        # words = [*set(words)] # have gotten "alternative rock rock"
-        seen, words = set(), genre[0].split() # split by spaces
-        words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
-        if len(words)>0:
-            if words[0]=='r' and len(words)>1:
-                if words[1]=='b':
-                    words = words[:1] + ['and'] + words[1:]
-                if words[1]=='n':
-                    words[1] = 'and'
-            if words[0]=='rock' and len(words)>1: # and words[1]!='and': # except rock & roll
-                if words[1]=='n':
-                    words[1] = 'and'
-                if words[1]=='roll':
-                    words = words[:1] + ['and'] + words[1:]
-                if words[1]!='and':
-                    print('Reversing...')
-                    words = reversed(words) # e.g. rock pop vs. pop rock
-        genre[0] = ' '.join(words) # uniform spacing
-        if ' and ' in genre[0]: # and convert back (have fixed spacing now)
-            genre[0] = genre[0].replace('and','&')
-        # Split up labels with slash
-        split = []
-        if '/' in genre[0]:
-            split = genre[0].split('/')
-        elif ';' in genre[0]:
-            split = genre[0].split(';')
-        for newgenre in split:
-            newgenres.append([newgenre,genre[1]])
-            badids.append(g)
-        # Rhythm and blues
-        if 'r & b' in genre[0]:
-            genre[0] = genre[0].replace('r & b','rhythm & blues')
-    # Split up tag labels with slash (/) in them
-    genres = [genre for g,genre in enumerate(genres) if g not in badids]
-    genres = genres + newgenres
-    # Repeat our process of adding counts for duplicate genre names
-    dict_ = {}
-    for genre in genres:
-        try: dict_[genre[0]] += genre[1]
-        except KeyError:
-            dict_[genre[0]] = genre[1]
-    genres = [[name,count] for name,count in dict_.items()] # back to list of lists
-    genres = sorted(genres, key=lambda x: x[1], reverse=True)
-    # And finally filter the managed genre list
-    # ignore = ['rock','pop','country','rap','00s','90s','80s','70s','60s','50s','40s','30s','10s','20s'] # too vague
-    ignorewords = ['vinyl','cassette','cd','digital','cover', # ...
-            'sad','depressing','happy','angry','bowie',
-            'genre','collection','original','master','recording','classic','general','oldies','live','track','_', # cover e.g. "covered by"
-            'vocal','dance','revolution','remark','catchy','playback','song','early','late','revival','singer','songwriter','club', # ...
-            # 'alternativo','britannique', # spanish
-            '00','90','80','70','60','50','40','30','10','20'] # these aren't even genres; some have them listed
-    ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
-    if options['debug']:
-        print('Genres after translation:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
-    genres = [genre for genre in genres # iterate through pairs
-            if all(dictionary.check(word) for word in genre[0].split()) # make sure words are english
-            # and all(ord(c)<128 for c in genre[0]) # any genres not written in english (e.g. "Américain" was common)
-            and (len(genre[0].split())<=3 if '&' in genre[0] else len(genre[0].split())<=2) # sometimes weird stuff creeps in
-            and not any(i in genre[0] for i in ignorewords) # will catch e.g. "oldies", "70's", etc., and
-            and not any(i==genre[0] for i in ignorematch) # will catch exact matches
-            and genre[1]>0] # make sure at least one count
-    if options['debug']:
-        print('Genres after filter on the translations:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
-    # Save genres
-    # genre = [genre[0].title() for genre in genres[:3]] if len(genres)>0 else []
-    genres = [genre[0].title() for genre in genres[:N]] if len(genres)>0 else []
-    return genres
-
-def genres_discogs(rgid):
-    """Gets the discogs page linked to a release group, and pulls the genre info
-    or album artwork from there."""
-    # Get the MusicBrainz URL from the releasegroup id
-    url = f"https://musicbrainz.org/release-group/{rgid}"
-    try: content = requests.get(url).content
-    except ConnectionError:
-        raise ValueError('Seems to be invalid release-group id :(')
-    page = BeautifulSoup(content, 'lxml').decode() # converts to string
-    # Parse HTMl page to get the discogs id
-    # From: https://stackoverflow.com/questions/15517483/how-to-extract-urls-from-an-html-page-in-python
-    def geturl(page):
-        """Gets URL data."""
-        start_link = page.find("a href")
-        if start_link == -1:
-            return None, 0
-        start_quote = page.find('"', start_link)
-        end_quote = page.find('"', start_quote + 1)
-        url = page[start_quote + 1: end_quote]
-        return url, end_quote
-    urls = []
-    while True:
-        url, n = geturl(page)
-        page = page[n:]
-        if not url:
-            break
-        urls.append(url)
-    # Get discogs URL (set comprehension, because want unique result)
-    # And parse out the discogs release id
-    urls = [*{url.rstrip('/') for url in urls if 'discogs' in url}]
-    if len(urls)==0:
-        print('Could not find any linked discogs pages on release-group page :(')
-        return []
-    if len(urls)>1:
-        print('WARNING: Seems to be ambiguous number of discogs links on page.')
-    master = os.path.basename(urls[0]) # because it is the last part after slash
-    try: master = int(master)
-    except TypeError:
-        print('Could not pase the discogs url :(')
-        return []
-    # Finally, call discogs by release-group id
-    print(f'Found discogs master id: {master}')
-    data = client.master(master) # this function just looks up id, returns stuff
-    styles = data.fetch('styles') # sometimes doesn't return everything in data dict; maybe is not
-    genres = data.fetch('genres') # add genres
-        # supposed to be accessed by users; only use fetch from now on
-    if styles is None: styles = []
-    if genres is None: genres = []
-    genres = genres+styles
-    if len(genres)==0:
-        print('No genres found on discogs page :(')
-        return []
-    genres = [genre for genre in genres if genre not in ('Contemporary','Soundtrack','Score')]
-    genres = [[genre, 1] for genre in genres] # name, count format
-    # Exit
-    genres = genres_translate(genres)
-    print('Discogs genres:', genres)
-    return genres
-
-def genres_musicbrainz(recordings):
-    """Gets the genres from the MusicBrainz tag-list associated with a list
-    of recordings."""
-    # First get list of tags, and create list of tag-count pairs
-    tags = {}
-    for recording in recordings:
-        tagl = recording.get('tag-list',{})
-        for tagd in tagl: # dictionaries
-            if tagd['name'] not in tags:
-                tags[tagd['name']] = int(tagd['count'])
-            else:
-                tags[tagd['name']] += int(tagd['count'])
-    genres = sorted(list(tags.items()), key=lambda x: x[1], reverse=True) # (genre,count) tuples
-    genres = [[*genre] for genre in genres] # convert to lists
-    # Exit
-    genres = genres_translate(genres)
-    print('Tag genres:', genres)
-    return genres
-
-def guess_artwork(releases):
-    """Gets album artwork. Note country is tricky; often japanese releases have 
-    japenese text on them, but seems that European release are usually good and sometimes
-    are the only available digital copies. Maybe just ignore asian countries?"""
-    # First, go by release medium
-    years = [int(release.get('date','0001')[:4]) for release in releases]
-    media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
-    anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
-    # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
-        # unknown countries/broad regions seem to be less likely to not have annoying extra border text
-        # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
-    filter_known = [False for release in releases] # want to catch any unknown media
-    for m,medium in enumerate(media_pref):
-        if medium=='other': # we are at the end; see if any media were left
-            filter_ = [not known for known in filter_known] # iterate over what's left
-        else: # filter, and add known media to lsit
-            filter_ = [any(medium in _.get('format','xxxxx').lower() for _ in release.get('medium-list',[{}]))
-                for release in releases] # last one is unknown
-            filter_known = [f1 or f2 for f1,f2 in zip(filter_,filter_known)]
-        releasesA = [r for f,r in zip(filter_,releases) if f]
-        yearsA = [y for f,y in zip(filter_,years) if f]
-        for year in sorted(set(yearsA), reverse=True):
-            releasesB = [r for r,y in zip(releasesA,yearsA) if y==year]
-            for country in anglo_countries:
-                # Also try non-anglo countries (sometimes only one available)
-                if country=='other':
-                    releasesC = [r for r in releasesB if r.get('country','NA') not in anglo_countries]
-                else:
-                    releasesC = [r for r in releasesB if r.get('country','NA')==country]
-                # Try to return image art; remaining releases, choose order at random
-                for release in releasesC:
-                    # User input
-                    rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
-                    rcountry, rtitle = release.get('country',''), release.get('title','')
-                    print(f"Trying year {year}, media '{', '.join(rmedia)}', "\
-                            f"country '{rcountry}', title '{rtitle}'.",
-                            end='' if options['noconfirm'] else ' ')
-                    if options['noconfirm'] or not yesno():
-                        continue
-                    # Pull artwork
-                    try: 
-                        data = mb.get_image_front(release.get('id',''))
-                    except ResponseError:
-                        continue
-                    # Manipulate
-                    image = Image.open(BytesIO(data))
-                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping"\
-                            "to square if not equal.")
-                    if image.size[0]!=image.size[1]:
-                        sqsize = min(image.size)
-                        image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
-                        data = BytesIO()
-                        image.save(data, format='JPEG')
-                        data = data.getvalue()
-                    return data
-
 def guess_recordings(artist, recording): #artistnames, artistids):
     """Searches MusicBrainz for the artist and recordings corresponding to input.
     Tries to do this intelligently, and account for some rare special cases."""
@@ -400,7 +187,9 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     print(f'{len(recordings)} recordings with valid name found.')
     return artist, recordings
 
-# Album group function
+################################################################################
+# Function to guess album from list of recording dictionaries
+################################################################################
 def guess_album(recordings):
     """Guesses album group from input info. Returns a dictionary of metadata information
     including year, album title, image, and genres."""
@@ -491,7 +280,7 @@ def guess_album(recordings):
                         # Confirm user wants to use this album
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
                             f"count {group['count']}, earliest year '{group['year1']}', latest year '{group['yearf']}'")
-                        if options['noconfirm'] or not yesno():
+                        if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
                         # Get the genres
                         groupid = group['id'] # save the id
@@ -516,6 +305,225 @@ def guess_album(recordings):
     if backupdata is None:
         raise ValueError("No metadata to write.")
     return backupdata
+
+################################################################################
+# Functions to get genres from both MusicBrainz and Discogs
+################################################################################
+def genres_translate(genres, N=3):
+    """Translations. Can deal with ambiguous tag names in MusicBrainz database
+    and parse out some undesirable Discogs labels."""
+    if options['debug']:
+        print('Genres recovered from Discogs and MusicBrainz:')
+        for genre,count in genres:
+            print(f"{genre}: {count:d}")
+    # Run basic translations, so no duplicates of slightly different things
+    badids, newgenres = [], []
+    for g,genre in enumerate(genres):
+        # Translations
+        genre[0] = genre[0].lower() # ensure lower-case
+        genre[0] = genre[0].replace('alt-','alternative ') # consistent spelling
+        genre[0] = genre[0].replace('alt ','alternative ')
+        genre[0] = genre[0].replace('classic','') # sometimes get <something> classic rock
+        genre[0] = genre[0].replace('adult','') # always thought these were weird...
+        genre[0] = genre[0].replace('aor','album') # album-oriented-rock to album-rock
+        genre[0] = genre[0].replace('&',' and ')
+        # words = [*set(words)] # have gotten "alternative rock rock"
+        seen, words = set(), genre[0].split() # split by spaces
+        words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
+        if len(words)>0:
+            if words[0]=='r' and len(words)>1:
+                if words[1]=='b':
+                    words = words[:1] + ['and'] + words[1:]
+                if words[1]=='n':
+                    words[1] = 'and'
+            if words[0]=='rock' and len(words)>1: # and words[1]!='and': # except rock & roll
+                if words[1]=='n':
+                    words[1] = 'and'
+                if words[1]=='roll':
+                    words = words[:1] + ['and'] + words[1:]
+                if words[1]!='and':
+                    print('Reversing...')
+                    words = reversed(words) # e.g. rock pop vs. pop rock
+        genre[0] = ' '.join(words) # uniform spacing
+        if ' and ' in genre[0]: # and convert back (have fixed spacing now)
+            genre[0] = genre[0].replace('and','&')
+        # Split up labels with slash
+        split = []
+        if '/' in genre[0]:
+            split = genre[0].split('/')
+        elif ';' in genre[0]:
+            split = genre[0].split(';')
+        for newgenre in split:
+            newgenres.append([newgenre,genre[1]])
+            badids.append(g)
+        # Rhythm and blues
+        if 'r & b' in genre[0]:
+            genre[0] = genre[0].replace('r & b','rhythm & blues')
+    # Split up tag labels with slash (/) in them
+    genres = [genre for g,genre in enumerate(genres) if g not in badids]
+    genres = genres + newgenres
+    # Repeat our process of adding counts for duplicate genre names
+    dict_ = {}
+    for genre in genres:
+        try: dict_[genre[0]] += genre[1]
+        except KeyError:
+            dict_[genre[0]] = genre[1]
+    genres = [[name,count] for name,count in dict_.items()] # back to list of lists
+    genres = sorted(genres, key=lambda x: x[1], reverse=True)
+    # And finally filter the managed genre list
+    # ignore = ['rock','pop','country','rap','00s','90s','80s','70s','60s','50s','40s','30s','10s','20s'] # too vague
+    ignorewords = ['vinyl','cassette','cd','digital','cover', # ...
+            'sad','depressing','happy','angry','bowie',
+            'genre','collection','original','master','recording','classic','general','oldies','live','track','_', # cover e.g. "covered by"
+            'vocal','dance','revolution','remark','catchy','playback','song','early','late','revival','singer','songwriter','club', # ...
+            # 'alternativo','britannique', # spanish
+            '00','90','80','70','60','50','40','30','10','20'] # these aren't even genres; some have them listed
+    ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
+    if options['debug']:
+        print('Genres after translation:')
+        for genre,count in genres:
+            print(f"{genre}: {count:d}")
+    genres = [genre for genre in genres # iterate through pairs
+            if all(dictionary.check(word) for word in genre[0].split()) # make sure words are english
+            # and all(ord(c)<128 for c in genre[0]) # any genres not written in english (e.g. "Américain" was common)
+            and (len(genre[0].split())<=3 if '&' in genre[0] else len(genre[0].split())<=2) # sometimes weird stuff creeps in
+            and not any(i in genre[0] for i in ignorewords) # will catch e.g. "oldies", "70's", etc., and
+            and not any(i==genre[0] for i in ignorematch) # will catch exact matches
+            and genre[1]>0] # make sure at least one count
+    if options['debug']:
+        print('Genres after filter on the translations:')
+        for genre,count in genres:
+            print(f"{genre}: {count:d}")
+    # Save genres
+    # genre = [genre[0].title() for genre in genres[:3]] if len(genres)>0 else []
+    genres = [genre[0].title() for genre in genres[:N]] if len(genres)>0 else []
+    return genres
+def genres_discogs(rgid):
+    """Gets the discogs page linked to a release group, and pulls the genre info
+    or album artwork from there."""
+    # Get the MusicBrainz URL from the releasegroup id
+    url = f"https://musicbrainz.org/release-group/{rgid}"
+    try: content = requests.get(url).content
+    except ConnectionError:
+        raise ValueError('Seems to be invalid release-group id :(')
+    page = BeautifulSoup(content, 'lxml').decode() # converts to string
+    # Parse HTMl page to get the discogs id
+    # From: https://stackoverflow.com/questions/15517483/how-to-extract-urls-from-an-html-page-in-python
+    urls = []
+    while True:
+        url, n = geturl(page)
+        page = page[n:]
+        if not url:
+            break
+        urls.append(url)
+    # Get discogs URL (set comprehension, because want unique result)
+    # And parse out the discogs release id
+    urls = [*{url.rstrip('/') for url in urls if 'discogs' in url}]
+    if len(urls)==0:
+        print('Could not find any linked discogs pages on release-group page :(')
+        return []
+    if len(urls)>1:
+        print('WARNING: Seems to be ambiguous number of discogs links on page.')
+    master = os.path.basename(urls[0]) # because it is the last part after slash
+    try: master = int(master)
+    except TypeError:
+        print('Could not pase the discogs url :(')
+        return []
+    # Finally, call discogs by release-group id
+    print(f'Found discogs master id: {master}')
+    data = client.master(master) # this function just looks up id, returns stuff
+    styles = data.fetch('styles') # sometimes doesn't return everything in data dict; maybe is not
+    genres = data.fetch('genres') # add genres
+        # supposed to be accessed by users; only use fetch from now on
+    if styles is None: styles = []
+    if genres is None: genres = []
+    genres = genres+styles
+    if len(genres)==0:
+        print('No genres found on discogs page :(')
+        return []
+    genres = [genre for genre in genres if genre not in ('Contemporary','Soundtrack','Score')]
+    genres = [[genre, 1] for genre in genres] # name, count format
+    # Exit
+    genres = genres_translate(genres)
+    print('Discogs genres:', genres)
+    return genres
+def genres_musicbrainz(recordings):
+    """Gets the genres from the MusicBrainz tag-list associated with a list
+    of recordings."""
+    # First get list of tags, and create list of tag-count pairs
+    tags = {}
+    for recording in recordings:
+        tagl = recording.get('tag-list',{})
+        for tagd in tagl: # dictionaries
+            if tagd['name'] not in tags:
+                tags[tagd['name']] = int(tagd['count'])
+            else:
+                tags[tagd['name']] += int(tagd['count'])
+    genres = sorted(list(tags.items()), key=lambda x: x[1], reverse=True) # (genre,count) tuples
+    genres = [[*genre] for genre in genres] # convert to lists
+    # Exit
+    genres = genres_translate(genres)
+    print('Tag genres:', genres)
+    return genres
+
+################################################################################
+# Function to get "best" artwork from a release group
+################################################################################
+def guess_artwork(releases):
+    """Gets album artwork. Note country is tricky; often japanese releases have 
+    japenese text on them, but seems that European release are usually good and sometimes
+    are the only available digital copies. Maybe just ignore asian countries?"""
+    # First, go by release medium
+    years = [int(release.get('date','0001')[:4]) for release in releases]
+    media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
+    anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
+    # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
+        # unknown countries/broad regions seem to be less likely to not have annoying extra border text
+        # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
+    filter_known = [False for release in releases] # want to catch any unknown media
+    for m,medium in enumerate(media_pref):
+        if medium=='other': # we are at the end; see if any media were left
+            filter_ = [not known for known in filter_known] # iterate over what's left
+        else: # filter, and add known media to lsit
+            filter_ = [any(medium in _.get('format','xxxxx').lower() for _ in release.get('medium-list',[{}]))
+                for release in releases] # last one is unknown
+            filter_known = [f1 or f2 for f1,f2 in zip(filter_,filter_known)]
+        releasesA = [r for f,r in zip(filter_,releases) if f]
+        yearsA = [y for f,y in zip(filter_,years) if f]
+        for year in sorted(set(yearsA), reverse=True):
+            releasesB = [r for r,y in zip(releasesA,yearsA) if y==year]
+            for country in anglo_countries:
+                # Also try non-anglo countries (sometimes only one available)
+                if country=='other':
+                    releasesC = [r for r in releasesB if r.get('country','NA') not in anglo_countries]
+                else:
+                    releasesC = [r for r in releasesB if r.get('country','NA')==country]
+                # Try to return image art; remaining releases, choose order at random
+                for release in releasesC:
+                    # User input
+                    rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
+                    rcountry, rtitle = release.get('country',''), release.get('title','')
+                    print(f"Trying year {year}, media '{', '.join(rmedia)}', "\
+                            f"country '{rcountry}', title '{rtitle}'.",
+                            end='' if options['noconfirm'] else ' ')
+                    if not yesno():
+                        continue
+                    # Pull artwork
+                    try: 
+                        data = mb.get_image_front(release.get('id',''))
+                    except ResponseError:
+                        continue
+                    # Manipulate
+                    image = Image.open(BytesIO(data))
+                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping"\
+                            "to square if not equal.")
+                    if image.size[0]!=image.size[1]:
+                        sqsize = min(image.size)
+                        image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
+                        data = BytesIO()
+                        image.save(data, format='JPEG')
+                        data = data.getvalue()
+                    return data
 
 if __name__ == "__main__":
     ############################################################################
@@ -570,8 +578,6 @@ if __name__ == "__main__":
 
     ############################################################################
     # Call functions and apply metadata
-    # TODO: Make guess-recordings return the writeable artist name
-    # TODO: Use the track name from one of the recordings instead of the user name
     ############################################################################
     print(f"Retrieving metadata for '{filename}'...")
     artist, recordings = guess_recordings(artist, recording) # pull just the recordings
