@@ -33,9 +33,15 @@ This tagging script is certainly not the fastest out there. For example the buil
 
 Instead, it is designed to **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate.
 
-You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID, only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). There might be some *rare, but very real* situations where the search returns songs from artists we don't want (can't find any examples right now, but may have come across them during testing).
+You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID.
+<!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
+If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search
+<!-- be some *rare, but very real* situations where the search  -->
+may return songs from artists we don't want.
 
-So, it may be better to have the user explicitly confirm the artist using disambiguation information. Though this needs more testing -- if I can't find any examples, may just forget it.
+However, if I can figure out a way to automatically figure out these rare polluted matches, I may stop making the user confirm the artist ID with manual input.
+
+<!-- So, it may be better to have the user explicitly confirm the artist using disambiguation information. Though this needs more testing - if I can't find any examples, may just forget it. -->
 <!-- In the future I might work this out, and eliminate the need to search for artists separately. Needs more testing. -->
 
 <!-- You might ask why we do an artist search without also including the recording information? The answer is because of the limitations of the MusicBrainz API searching tools. If you want to name your file `Animals - Around and Around` then run a strict search of the datababase, you will get no results: the database thinks you want some obscure band called `Animals` and not the iconic British invasion band `The Animals`. Same goes for `Tom Petty` vs. `Tom Petty and the Heartbreakers` - most titles are under the latter, but if you want to name your files by the former, you will get no results. -->
