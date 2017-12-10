@@ -28,6 +28,19 @@ format of youtube audio), applies metadata based on the user-input name, and nor
 Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
 filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
+## Usage of metadata script
+The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existin files. Usage is as follows:
+
+    metadata <flags> <filename(s)>
+
+This time the filename(s) must have escaped spaces. The following flag options are available:
+* `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
+* `--debug`: Echo some extra information during downloading process.
+* `--noconfirm`: Do not prompt user to confirm the release group. The `youtube` script uses this flag but the thinking is, if a user calls metadata manually, they may want more control.
+* `--nofilter`: Do not filter recordings by name.
+* `--noconfig`: Do not read previous user responses to ambiguous artist names from the config file.
+* `--genreonly`: Only add genre metadata, nothing else. Because the genre addition still has much room for improvement this was included for testing.
+
 ## Philosophy of metadata script
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
 
