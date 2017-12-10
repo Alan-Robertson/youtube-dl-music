@@ -33,11 +33,9 @@ This tagging script is certainly not the fastest out there. For example the buil
 
 Instead, it is designed to **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate.
 
-You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID.
+You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want.
 <!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
-If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search
 <!-- be some *rare, but very real* situations where the search  -->
-may return songs from artists we don't want.
 
 However, if I can figure out a way to automatically figure out these rare polluted matches, I may stop making the user confirm the artist ID with manual input.
 
