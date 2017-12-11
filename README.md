@@ -2,7 +2,7 @@
 <!-- Downloading content from the internet for personal use (not distribution) is not illegal (criminal law or copyright infringement); but by using this script, you are breaking Youtube's Terms of Service (civil law). Then again, that's a problem for the `youtube-dl` devs, not us :) -->
 ## Overview
 <!-- [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](lukelbd@gmail.com) -->
-This script uses `youtube-dl` to download and save the audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script I created called `metadata`.
+This script uses `youtube-dl` to download and save audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script I created called `metadata`.
 
 You need to create a file named `config` in the same directory as the `metadata` and `youtube` scripts before they can be used. Just add the following lines in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
   * Add to `config` the line `directory = <your music folder here>` to set the download location.
