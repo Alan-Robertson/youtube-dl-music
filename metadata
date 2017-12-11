@@ -86,8 +86,9 @@ def yesno():
             elif response[0].lower()=='y':
                 return True # continue?
         print('Invalid choice.') 
-def geturl(page):
+def findurls(page):
     # Gets URL data from HTML lines
+    # Each page.find moves the "reader/parser" farther down the object
     start_link = page.find("a href")
     if start_link == -1:
         return None, 0
@@ -109,6 +110,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         for istring in string.split('/'):
             istring = ud.unidecode(string) # get plain ASCII letters from accents
             istring = re.sub("\.","",istring) # e.g. S.O.S. goes to SOS
+                # make sure to escape the '.'! that was a really dumb bug!
             istring = re.sub("&"," and ",istring) # standardize and symbols
             istring = re.sub(r"\(.*\)"," ",istring) # delete stuff in parentheses
             istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
@@ -135,6 +137,19 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             print(f'Integer must be <={N}.')
             return None
         return choices
+    def fixartist(artist):
+        # Helper function that does a special artist-name translation
+        # Different from the "words" function; that is meant to deal with punctuation
+        # and accents and stuff. This is generally empirical.
+        if '“' in artist and '”' in artist: # e.g. Haywire “Haywire Mac” McClintoc
+            artist = artist.split('“')[0] + artist.split('”')[-1]
+        if '∆' in artist: # stylized-name does not match database-name often
+            artist = re.sub('[∆]','A',artist)
+        if artist=='Chet Faker': # all releases are under this name in database
+            artist = 'Nick Murphy'
+        if artist=='Hall and Oates': # listed separately for some reason
+            artist = 'Daryl Hall and John Oates'
+        return artist
     # Search the database with a strict search, results should be pretty darn good
     # Results will have list of artist dictionaries under the "artist-credit" fields
     # For some reason each artist dictionary is embedded in a singleton dictionary with key "artist"
@@ -160,6 +175,10 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             if recartist.get('id','') not in uqartistids # check if already recorded this one
             and not uqartistids.add(recartist.get('id',''))] # if not, add to set during comprehension
                 # must be and statement, because if or, python will only execute the first one
+    # print([uqartist.get('name','') for uqartist in uqartists])
+    uqartists = [uqartist for uqartist in uqartists if # check equality of word-lists
+            words(fixartist(uqartist.get('name','')))==words(fixartist(artist))]
+    # print([uqartist.get('name','') for uqartist in uqartists])
     if len(uqartists)>1:
         # There is more than one unique artist in the list; we must pick one
         # Load the config file, and see if a previous response is in there
@@ -172,7 +191,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         if not options['noconfig'] and artist in df.index.values: # load previous user response
             ids = df.loc[artist].values[0].split(',') # list of ids user chose
             choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
-            print(f'Loaded previous response: {choices}.') # the last choices
+            print(f'Loaded previous response: {",".join(choices)}.') # the last choices
         else: # get and save user response
             choices = None # initialize with this
             while choices is None: # if None there was error, and loop will repeat
@@ -183,18 +202,23 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             df.to_csv(metaconfig)
         recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
             if recartistid in ids] # make sure they are in user-selected choice
+    else:
+        # Don't need a list of possible ids; just use the only one left
+        recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
+            if recartistid==uqartists[0].get('id','')] # make sure they are in user-selected choice
+    print(f'{len(recordings)} recordings with valid artist found.')
     # Filter out bad/unwanted recordings first
     # Translate recordings, so no rejection due to capitalization/punctuation
     if not options['nofilter']:
         if options['debug']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Discovered track names:',*rectitles,sep='\n')
-        recordings = [irecording for irecording in recordings if # check equality of sets
+        recordings = [irecording for irecording in recordings if # check equality of word-lists
             any(x==y for x,y in zip(words(recording),words(irecording.get('title',''))))]
         if options['debug']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Filtered track names:',*rectitles,sep='\n')
-    print(f'{len(recordings)} recordings with valid name found.')
+    print(f'{len(recordings)} recordings with valid title found.')
     return artist, recordings
 
 ################################################################################
@@ -349,9 +373,8 @@ def genres_translate(genres, discogs=False, N=3):
                     words[1] = 'and'
                 if words[1]=='roll':
                     words = words[:1] + ['and'] + words[1:]
-                if words[1]!='and':
-                    print('Reversing...')
-                    words = reversed(words) # e.g. rock pop vs. pop rock
+                if words[1]!='and': # e.g. rock pop --> pop rock
+                    words = reversed(words)
         genre[0] = ' '.join(words) # uniform spacing
         if ' and ' in genre[0]: # and convert back (have fixed spacing now)
             genre[0] = genre[0].replace('and','&')
@@ -379,7 +402,8 @@ def genres_translate(genres, discogs=False, N=3):
     genres = [[name,count] for name,count in dict_.items()] # back to list of lists
     genres = sorted(genres, key=lambda x: x[1], reverse=True)
     # And finally filter the managed genre list
-    # ignore = ['rock','pop','country','rap','00s','90s','80s','70s','60s','50s','40s','30s','10s','20s'] # too vague
+    # Unfortunately we have to do this empirical testing nonsense if we want to assimilate
+    # the MusicBrainz recording "tags" -- they are sometimes actual genres, but often completely useless
     ignorewords = ['vinyl','cassette','cd','digital','cover', # ...
             'sad','depressing','happy','angry','bowie',
             'context','contest','remark','catchy','playback',
@@ -390,13 +414,11 @@ def genres_translate(genres, discogs=False, N=3):
     ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
     genres = [genre for genre in genres # iterate through pairs
             if all(dictionary.check(word) for word in genre[0].split()) # make sure words are english
-            # and all(ord(c)<128 for c in genre[0]) # any genres not written in english (e.g. "Américain" was common)
-            and (len(genre[0].split())<=3 if '&' in genre[0] else len(genre[0].split())<=2) # sometimes weird stuff creeps in
-            and not any(i in genre[0] for i in ignorewords) # will catch e.g. "oldies", "70's", etc., and
-            and not any(i==genre[0] for i in ignorematch) # will catch exact matches
-            and genre[1]>0] # make sure at least one count
-    # Save genres, and manage case
-    # genre = [genre[0].title() for genre in genres[:3]] if len(genres)>0 else []
+            and (len(genre[0].split())<=3 if '&' in genre[0] else len(genre[0].split())<=2) # limit 2 words, or "a & b"
+            and not any(i in genre[0] for i in ignorewords) # catches e.g. "oldies", "70's", etc., and
+            and not any(i==genre[0] for i in ignorematch) # catches uninformative names e.g. "pop"
+            and genre[1]>0] # make sure at least one "count" is present
+    # Save genres in Title Case; make a few exceptions (again, from empirical testing)
     genres = [genre[0].title() for genre in genres[:N]] if len(genres)>0 else []
     genres = [genre.replace('Am ','AM ') for genre in genres] # e.g. AM pop
     return genres
@@ -412,12 +434,11 @@ def genres_discogs(rgid):
     # Parse HTMl page to get the discogs id
     # From: https://stackoverflow.com/questions/15517483/how-to-extract-urls-from-an-html-page-in-python
     urls = []
-    while True:
-        url, n = geturl(page)
+    url = True # fill initial case
+    while url: # while non-empty
+        url, n = findurls(page)
         page = page[n:]
-        if not url:
-            break
-        urls.append(url)
+        if url: urls.append(url)
     # Get discogs URL (set comprehension, because want unique result)
     # And parse out the discogs release id
     urls = [*{url.rstrip('/') for url in urls if 'discogs' in url}]
@@ -611,7 +632,8 @@ if __name__ == "__main__":
             sys.exit()
         # Addd MP4-format metadata
         print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
-            f"'{albumprops['title']}', year {albumprops['year']}, genres {', '.join(albumprops['genres'])}.") #", genre '{data['genre']}'.")
+            f"'{albumprops['title']}', year '{albumprops['year']}', "
+            f"genres {'<none>' if len(albumprops['genres'])==0 else ', '.join(albumprops['genres'])}.")
         if id3: # First try editing an ID3 header, if has one
             # Below are ID3v2, not ID3v2.4 (default format of mutagen, and modern version)
             tags.delete(filepath) # delete old data, if we downloaded from somewhere; want to assigne my better data
