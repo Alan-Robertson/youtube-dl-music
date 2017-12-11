@@ -108,7 +108,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         iwords = []
         for istring in string.split('/'):
             istring = ud.unidecode(string) # get plain ASCII letters from accents
-            istring = re.sub(".","",istring) # e.g. S.O.S. goes to SOS
+            istring = re.sub("\.","",istring) # e.g. S.O.S. goes to SOS
             istring = re.sub("&"," and ",istring) # standardize and symbols
             istring = re.sub(r"\(.*\)"," ",istring) # delete stuff in parentheses
             istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
