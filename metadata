@@ -108,6 +108,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         iwords = []
         for istring in string.split('/'):
             istring = ud.unidecode(string) # get plain ASCII letters from accents
+            istring = re.sub(".","",istring) # e.g. S.O.S. goes to SOS
             istring = re.sub("&"," and ",istring) # standardize and symbols
             istring = re.sub(r"\(.*\)"," ",istring) # delete stuff in parentheses
             istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
@@ -137,7 +138,16 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     # Search the database with a strict search, results should be pretty darn good
     # Results will have list of artist dictionaries under the "artist-credit" fields
     # For some reason each artist dictionary is embedded in a singleton dictionary with key "artist"
-    recordings = mb.search_recordings(recording, artist=artist, strict=True)['recording-list']
+    offset = 0 # start at 0 offset
+    recordings = [] # put recordings here
+    newrecordings = [None]
+    while len(newrecordings)>0:
+        # Get recordings; can only run through 100 at a time at most, so make sure to get all
+        if offset>0: print(f'Found {offset} recordings...')
+        newrecordings = mb.search_recordings(recording, artist=artist,
+                strict=True, limit=100, offset=offset)['recording-list']
+        recordings.extend(newrecordings)
+        offset += len(newrecordings)
     recartists = [irecording['artist-credit'][0] for irecording in recordings
             if len(irecording.get('artist-credit',[]))>0] # verify length is non-zero
     recartists = [recartist.get('artist',{}) for recartist in recartists 
@@ -201,6 +211,7 @@ def guess_album(recordings):
     # Get families of releases belonging to release groups
     # This stuff is complicated and I don't want to look at it again
     groups = []
+    duplicates = 0 # will record number of duplicates removed
     rgroupids = [release.get('release-group',{}).get('id','') for release in releases] # 1:1 correspondance with above
     uniqueidxs = [rgroupids.index(r) for r in set(rgroupids)] # unique indices
     for uidx in uniqueidxs: # will iterate through unique releases
@@ -214,8 +225,8 @@ def guess_album(recordings):
         greleaseids = [grelease.get('id','') for grelease in greleases]
         guniqueidxs = [greleaseids.index(g) for g in set(greleaseids)]
         greleases = [grelease for idx,grelease in enumerate(greleases) if idx in guniqueidxs]
-        if len(greleases)<len(greleaseids):
-            print(f"{len(greleaseids)-len(greleases):d} duplicate releases removed.")
+        if len(greleases)<len(greleaseids): # black magic
+            duplicates += len(greleaseids)-len(greleases)
         # Pop the release-group dictionary from the release list
         # Then save the releases/recordings corresponding to this group
         for grelease in greleases:
@@ -223,7 +234,7 @@ def guess_album(recordings):
         group['releases'] = greleases
         group['recordings'] = grecordings
         groups.append(group)
-    print(f"{len(releases):d} releases consolidated into {len(groups)} release groups.")
+    print(f"{len(releases):d} releases consolidated into {len(groups)} release groups ({duplicates:d} duplicates removed).")
     # Figure out the best title to write to file; generally the title corresponding to earliest
     # release year should be a good bet; don't get it from same release as album art (might be another language)
     titles = [release.get('title','') for group in groups for release in group['releases']]
@@ -268,7 +279,8 @@ def guess_album(recordings):
     backupdata = None # empty by default
     type_prefs_grouped = (['Album','Single'],['EP'],['Compilation','Other','Soundtrack','NA'],['Live']) #,('Live',)):
     anglo_countries = ['XW','XE','US','GB','AU','CA','IE'] # have seen "unknown" country show up as japanese/korean
-    for type_prefs in type_prefs_grouped:
+    for itype,type_prefs in enumerate(type_prefs_grouped):
+        print(f"Trying albums of type: {', '.join(type_prefs)}.")
         for type_ in type_prefs:
             groupsA = [group for group in groups if group.get('type','NA')==type_]
             for year1 in sorted(set(group['year1'] for group in groupsA)):
@@ -279,7 +291,7 @@ def guess_album(recordings):
                     for group in groupsC:
                         # Confirm user wants to use this album
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
-                            f"count {group['count']}, earliest year '{group['year1']}', latest year '{group['yearf']}'")
+                            f"count {group['count']}, earliest year '{group['year1']}', latest year '{group['yearf']}'.")
                         if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
                         # Get the genres
@@ -288,9 +300,8 @@ def guess_album(recordings):
                         if options['genreonly'] and len(genres)==0:
                             continue
                         # Backup data; use if can't find any images
-                        metadata = {'id':groupid, 'genres':genres,
-                            'title':title, 'year':year, 'image':None}
-                        print(metadata)
+                        metadata = {'id':groupid, 'title':title,
+                            'year':year, 'genres':genres, 'image':None}
                         if backupdata is None:
                             backupdata = metadata
                         # Get album art
@@ -309,13 +320,10 @@ def guess_album(recordings):
 ################################################################################
 # Functions to get genres from both MusicBrainz and Discogs
 ################################################################################
-def genres_translate(genres, N=3):
+def genres_translate(genres, discogs=False, N=3):
     """Translations. Can deal with ambiguous tag names in MusicBrainz database
-    and parse out some undesirable Discogs labels."""
-    if options['debug']:
-        print('Genres recovered from Discogs and MusicBrainz:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
+    and parse out some undesirable Discogs labels. Only outputs the first N
+    genre tags in the list."""
     # Run basic translations, so no duplicates of slightly different things
     badids, newgenres = [], []
     for g,genre in enumerate(genres):
@@ -374,15 +382,12 @@ def genres_translate(genres, N=3):
     # ignore = ['rock','pop','country','rap','00s','90s','80s','70s','60s','50s','40s','30s','10s','20s'] # too vague
     ignorewords = ['vinyl','cassette','cd','digital','cover', # ...
             'sad','depressing','happy','angry','bowie',
-            'genre','collection','original','master','recording','classic','general','oldies','live','track','_', # cover e.g. "covered by"
-            'vocal','dance','revolution','remark','catchy','playback','song','early','late','revival','singer','songwriter','club', # ...
+            'context','contest','remark','catchy','playback',
+            'genre','collection','original','master','recording','classic','general','oldies','live','track','_',
+            'vocal','dance','revolution','song','early','late','revival','singer','songwriter','club', # ...
             # 'alternativo','britannique', # spanish
             '00','90','80','70','60','50','40','30','10','20'] # these aren't even genres; some have them listed
     ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
-    if options['debug']:
-        print('Genres after translation:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
     genres = [genre for genre in genres # iterate through pairs
             if all(dictionary.check(word) for word in genre[0].split()) # make sure words are english
             # and all(ord(c)<128 for c in genre[0]) # any genres not written in english (e.g. "Américain" was common)
@@ -390,13 +395,10 @@ def genres_translate(genres, N=3):
             and not any(i in genre[0] for i in ignorewords) # will catch e.g. "oldies", "70's", etc., and
             and not any(i==genre[0] for i in ignorematch) # will catch exact matches
             and genre[1]>0] # make sure at least one count
-    if options['debug']:
-        print('Genres after filter on the translations:')
-        for genre,count in genres:
-            print(f"{genre}: {count:d}")
-    # Save genres
+    # Save genres, and manage case
     # genre = [genre[0].title() for genre in genres[:3]] if len(genres)>0 else []
     genres = [genre[0].title() for genre in genres[:N]] if len(genres)>0 else []
+    genres = [genre.replace('Am ','AM ') for genre in genres] # e.g. AM pop
     return genres
 def genres_discogs(rgid):
     """Gets the discogs page linked to a release group, and pulls the genre info
@@ -420,17 +422,17 @@ def genres_discogs(rgid):
     # And parse out the discogs release id
     urls = [*{url.rstrip('/') for url in urls if 'discogs' in url}]
     if len(urls)==0:
-        print('Could not find any linked discogs pages on release-group page :(')
+        print('No Discogs genres found: could not find URL on MusicBrainz page.')
         return []
     if len(urls)>1:
-        print('WARNING: Seems to be ambiguous number of discogs links on page.')
+        print('No Discogs genres found: ambiguous number of URL candidates on MusicBrainz page.')
+        return []
     master = os.path.basename(urls[0]) # because it is the last part after slash
     try: master = int(master)
     except TypeError:
-        print('Could not pase the discogs url :(')
+        print('No Discogs genres found: could not parse the URL found on MusicBrainz page.')
         return []
     # Finally, call discogs by release-group id
-    print(f'Found discogs master id: {master}')
     data = client.master(master) # this function just looks up id, returns stuff
     styles = data.fetch('styles') # sometimes doesn't return everything in data dict; maybe is not
     genres = data.fetch('genres') # add genres
@@ -439,17 +441,23 @@ def genres_discogs(rgid):
     if genres is None: genres = []
     genres = genres+styles
     if len(genres)==0:
-        print('No genres found on discogs page :(')
+        print("No Discogs genres found: none listed under the 'master' release.")
         return []
     genres = [genre for genre in genres if genre not in ('Contemporary','Soundtrack','Score')]
     genres = [[genre, 1] for genre in genres] # name, count format
-    # Exit
+    if options['debug']:
+        print(f'Discogs genres discovered:')
+        for genre,count in genres:
+            print(f"{genre.title()}: {count:d}")
     genres = genres_translate(genres)
-    print('Discogs genres:', genres)
+    if len(genres)==0:
+        print("No Discogs genres found: none left after translation.")
+        return []
+    print(f"Discogs genres for writing: {', '.join(genres)}.")
     return genres
 def genres_musicbrainz(recordings):
     """Gets the genres from the MusicBrainz tag-list associated with a list
-    of recordings."""
+    of recordings. Ouputs count-genres lists."""
     # First get list of tags, and create list of tag-count pairs
     tags = {}
     for recording in recordings:
@@ -461,9 +469,15 @@ def genres_musicbrainz(recordings):
                 tags[tagd['name']] += int(tagd['count'])
     genres = sorted(list(tags.items()), key=lambda x: x[1], reverse=True) # (genre,count) tuples
     genres = [[*genre] for genre in genres] # convert to lists
-    # Exit
+    if options['debug']:
+        print(f'MusicBrainz genres discovered:')
+        for genre,count in genres:
+            print(f"{genre.title()}: {count:d}")
     genres = genres_translate(genres)
-    print('Tag genres:', genres)
+    if len(genres)==0:
+        print("No MusicBrainz genres found: couldn't find any useful recording tags.")
+        return []
+    print(f"MusicBrainz genres for writing: {', '.join(genres)}.")
     return genres
 
 ################################################################################
@@ -503,9 +517,8 @@ def guess_artwork(releases):
                     # User input
                     rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
                     rcountry, rtitle = release.get('country',''), release.get('title','')
-                    print(f"Trying year {year}, media '{', '.join(rmedia)}', "\
-                            f"country '{rcountry}', title '{rtitle}'.",
-                            end='' if options['noconfirm'] else ' ')
+                    print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', "\
+                        f"country '{rcountry}', year '{year}'.")
                     if not yesno():
                         continue
                     # Pull artwork
@@ -515,7 +528,7 @@ def guess_artwork(releases):
                         continue
                     # Manipulate
                     image = Image.open(BytesIO(data))
-                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping"\
+                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping "\
                             "to square if not equal.")
                     if image.size[0]!=image.size[1]:
                         sqsize = min(image.size)
@@ -533,7 +546,7 @@ if __name__ == "__main__":
     options = ['nofilter', 'genreonly', 'debug', 
             'noconfirm', 'noconfig']
     options = {option: False for option in options} # the default settings
-    filepath = []
+    filepaths = []
     for arg in sys.argv[1:]:
         if arg.startswith('--'):
             if arg[2:]=='url': # better than trying implicit search
@@ -545,89 +558,93 @@ if __name__ == "__main__":
                 raise ValueError("Invalid '--' argument.")
             options[arg[2:]] = True # option enabled
         else:
-            filepath.append(arg)
-    filepath = ' '.join(filepath) # so don't have to escape spaces
-    if not os.path.exists(filepath):
-        raise ValueError(f"Could not find file {filepath}.")
-    filename = os.path.splitext(os.path.basename(filepath))[0].split(' - ')
-    if len(filename)!=2:
-        raise ValueError("Filename is not in the '<artist> - <title>' format.")
-    artist, recording = filename # convert to artist and track
-    # Premature track filtering (really necessary)
-    # User can add only these changes to a recording name, and they will be accounted for
-    # Otherwise the recording name really must match exactly
-    recording = recording.split('+')[0] # get first song in combo
-    recording = re.sub(r"\(.*\)"," ",recording) # delete stuff in parentheses
-    recording = " ".join(recording.split()) # single spaces only
+            filepaths.append(arg)
+    # filepath = ' '.join(filepath) # so don't have to escape spaces
+    for filepath in filepaths: # instead require escapes and can loop through
+        ########################################################################
+        # Check existence of files and infer artist/track information
+        ########################################################################
+        if not os.path.exists(filepath):
+            raise ValueError(f"Could not find file {filepath}.")
+        filename = os.path.splitext(os.path.basename(filepath))[0].split(' - ')
+        if len(filename)!=2:
+            raise ValueError("Filename is not in the '<artist> - <title>' format.")
+        artist, recording = filename # convert to artist and track
+        # Premature track filtering (really necessary)
+        # User can add only these changes to a recording name, and they will be accounted for
+        # Otherwise the recording name really must match exactly
+        recording = recording.split('+')[0] # get first song in combo
+        recording = re.sub(r"\(.*\)"," ",recording) # delete stuff in parentheses
+        recording = " ".join(recording.split()) # single spaces only
 
-    ############################################################################
-    # Open file, for different types
-    # Currently have compatibility with MP4 and ID3 tags
-    ############################################################################
-    try: # read AAC info
-        id3 = False # aac
-        tags = MP4(filepath)
-        print('Adding metadata according to AAC specifications.')
-    except MP4StreamInfoError:
-        id3 = True # mp3
-        try: # check header presence
-            tags = ID3(filepath)
-            print('Adding metadata using the ID3 header.')
-        except ID3NoHeaderError:
-            raise ValueError("Format may be incorrect.")
+        ########################################################################
+        # Open file, for different types
+        # Currently have compatibility with MP4 and ID3 tags
+        ########################################################################
+        try: # read AAC info
+            id3 = False # aac
+            tags = MP4(filepath)
+            print('Adding metadata according to AAC specifications.')
+        except MP4StreamInfoError:
+            id3 = True # mp3
+            try: # check header presence
+                tags = ID3(filepath)
+                print('Adding metadata using the ID3 header.')
+            except ID3NoHeaderError:
+                raise ValueError("Format may be incorrect.")
 
-    ############################################################################
-    # Call functions and apply metadata
-    ############################################################################
-    print(f"Retrieving metadata for '{filename}'...")
-    artist, recordings = guess_recordings(artist, recording) # pull just the recordings
-    albumprops = guess_album(recordings) # pull album year, artwork, and genres
-    # Special options for just tagging genres
-    if options['genreonly']:
-        print(f"Adding genres: '{albumprops['genres']}'")
-        if id3:
-            tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
-            tags.save(filepath) # supply path, in case we are creating for first time
-        if not id3:
-            tags["\xa9gen"] = [*albumprops['genres']]
-            tags.save()
-        sys.exit()
-    # Addd MP4-format metadata
-    print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
-        f"'{albumprops['title']}', year {albumprops['year']}, genres {albumprops['genres']}.") #", genre '{data['genre']}'.")
-    if id3: # First try editing an ID3 header, if has one
-        # Below are ID3v2, not ID3v2.4 (default format of mutagen, and modern version)
-        tags.delete(filepath) # delete old data, if we downloaded from somewhere; want to assigne my better data
-        # General stuff
-        tags["TPE1"] = TPE1(text=artist)
-        tags["TIT2"] = TIT2(text=recording) # just track name
-        tags["COMM"] = COMM(text=url, lang="eng", desc="URL")
-        # Album stuff
-        # tags["TYER"] = TYER(text=data['year']) # doesn't show up in swinsian, for some reason
-        # tags["TORY"] = TORY(text=data['year']) # maybe this will
-        # tags["TDAT"] = TDAT(text=data['year']) # recording date(s) (?)
-        # tags["TRDA"] = TRDA(text='0101') # recording date, MMDD
-        tags["TDOR"] = TDOR(text=albumprops['year']) # original release time
-        tags["TDRC"] = TDRC(text=albumprops['year']) # recording time
-        tags["TDRL"] = TDRL(text=albumprops['year']) # release time
-        tags["TALB"] = TALB(text=albumprops['title']) # album
-        tags["TOAL"] = TOAL(text=albumprops['title']) # original album
-        if albumprops['image'] is not None:
-            tags["APIC"] = APIC(data=albumprops['image'])
-        if albumprops['genres'] is not None:
-            tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
-        tags.save(filepath) # supply path, in case we are creating ID3 header for first time
-    if not id3: # Or just edit as an AAC file
-        # General stuff
-        tags["\xa9ART"] = [artist] # artist; includes whether "The" is in front, best punctuation, etc.
-        tags["\xa9nam"] = [recording] # track name
-        tags["\xa9cmt"] = [url] # embed URL as comment
-        # Album stuff
-        tags["\xa9day"] = [albumprops['year']]
-        tags["\xa9alb"] = [albumprops['title']] # album, from lookup
-        if albumprops['image'] is not None:
-            tags["covr"] = [MP4Cover(albumprops['image'], imageformat=MP4Cover.FORMAT_JPEG)]
-        if albumprops['genres'] is not None:
-            tags["\xa9gen"] = [*albumprops['genres']] # genres
-        tags.save() # don't need to re-supply with path
+        ########################################################################
+        # Call functions and apply metadata
+        ########################################################################
+        print(f"Retrieving metadata for '{artist} - {recording}'...")
+        artist, recordings = guess_recordings(artist, recording) # pull just the recordings
+        albumprops = guess_album(recordings) # pull album year, artwork, and genres
+        # Special options for just tagging genres
+        if options['genreonly']:
+            print(f"Adding genres: '{albumprops['genres']}'")
+            if id3:
+                tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
+                tags.save(filepath) # supply path, in case we are creating for first time
+            if not id3:
+                tags["\xa9gen"] = [*albumprops['genres']]
+                tags.save()
+            sys.exit()
+        # Addd MP4-format metadata
+        print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
+            f"'{albumprops['title']}', year {albumprops['year']}, genres {', '.join(albumprops['genres'])}.") #", genre '{data['genre']}'.")
+        if id3: # First try editing an ID3 header, if has one
+            # Below are ID3v2, not ID3v2.4 (default format of mutagen, and modern version)
+            tags.delete(filepath) # delete old data, if we downloaded from somewhere; want to assigne my better data
+            # General stuff
+            tags["TPE1"] = TPE1(text=artist)
+            tags["TIT2"] = TIT2(text=recording) # just track name
+            tags["COMM"] = COMM(text=url, lang="eng", desc="URL")
+            # Album stuff
+            # tags["TYER"] = TYER(text=data['year']) # doesn't show up in swinsian, for some reason
+            # tags["TORY"] = TORY(text=data['year']) # maybe this will
+            # tags["TDAT"] = TDAT(text=data['year']) # recording date(s) (?)
+            # tags["TRDA"] = TRDA(text='0101') # recording date, MMDD
+            tags["TDOR"] = TDOR(text=albumprops['year']) # original release time
+            tags["TDRC"] = TDRC(text=albumprops['year']) # recording time
+            tags["TDRL"] = TDRL(text=albumprops['year']) # release time
+            tags["TALB"] = TALB(text=albumprops['title']) # album
+            tags["TOAL"] = TOAL(text=albumprops['title']) # original album
+            if albumprops['image'] is not None:
+                tags["APIC"] = APIC(data=albumprops['image'])
+            if albumprops['genres'] is not None:
+                tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
+            tags.save(filepath) # supply path, in case we are creating ID3 header for first time
+        if not id3: # Or just edit as an AAC file
+            # General stuff
+            tags["\xa9ART"] = [artist] # artist; includes whether "The" is in front, best punctuation, etc.
+            tags["\xa9nam"] = [recording] # track name
+            tags["\xa9cmt"] = [url] # embed URL as comment
+            # Album stuff
+            tags["\xa9day"] = [albumprops['year']]
+            tags["\xa9alb"] = [albumprops['title']] # album, from lookup
+            if albumprops['image'] is not None:
+                tags["covr"] = [MP4Cover(albumprops['image'], imageformat=MP4Cover.FORMAT_JPEG)]
+            if albumprops['genres'] is not None:
+                tags["\xa9gen"] = [*albumprops['genres']] # genres
+            tags.save() # don't need to re-supply with path
 
