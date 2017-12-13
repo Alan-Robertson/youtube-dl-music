@@ -5,10 +5,17 @@
 # audio quality at similar bitrate. Also runs the file through a python metadata-tagging script.
 
 # Download directory; default is where I keep my music
-directory="~/Google Drive/Playlist"
-
-# Initial stuff
+directory="$(cat $(dirname $(realpath $0))/config | grep "directory" | cut -s -d '=' -f 2 | xargs)"
+  # cut will automatically trim leading/trailing whitespace it seems
 directory="${directory/"~"/$HOME}" # don't expand spaces, but expand ~
+directory="${directory%/}" # trim trailing slash if present
+if [ ! -d "$directory" ]; then
+  echo "ERROR: Directory \"$directory\" does not exist,"\
+    "or the directory was not declared/incorrectly declared in the config file."
+  exit 1
+fi
+
+# Parsing of filename and input
 name="${@:2}" # select all args (@) from 2 to end
 url="$1" # the original URL
 if [ -z "$url" ]; then
@@ -43,5 +50,5 @@ mv "$directory/normalized-$name.m4a" "$path"
 
 # Change metadata using python function
 # Do this quickly, so don't ask for user confirmation
-metadata --noconfirm --url="$url" "$path"
+metadata --url="$url" "$path"
 
