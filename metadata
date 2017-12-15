@@ -240,7 +240,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     if len(uqartists)>1:
         # There is more than one unique artist in the list; we must pick one
         # Load the config file, and see if a previous response is in there
-        for i,uqartist in enumerate(uqartists[:20]): # simple message
+        for i,uqartist in enumerate(uqartists): # simple message
             print(f"{i+1:d}: {uqartist.get('name','')} "\
                     f"({uqartist.get('disambiguation','')})".split('()')[0])
         try: df = pd.read_csv(metaconfig, index_col=0, header=0, dtype=str)
@@ -251,6 +251,11 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
             print(f'Loaded previous response: {",".join(str(c) for c in choices)}.') # the last choices
         else: # get and save user response
+            ### PATCH
+            raise ValueError("Need to confirm from these choices: " +
+                ', '.join(f"{uqartist.get('name','')} ({uqartist.get('disambiguation','')})".split('()')[0]
+                    for uqartist in uqartists) + '.')
+            ###
             choices = None # initialize with this
             while choices is None: # if None there was error, and loop will repeat
                 choices = input('Which artist number(s) should we use (enter 0 for all)?')
