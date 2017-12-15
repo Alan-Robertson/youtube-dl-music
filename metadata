@@ -251,11 +251,6 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
             print(f'Loaded previous response: {",".join(str(c) for c in choices)}.') # the last choices
         else: # get and save user response
-            ### PATCH
-            raise ValueError("Need to confirm from these choices: " +
-                ', '.join(f"{uqartist.get('name','')} ({uqartist.get('disambiguation','')})".split('()')[0]
-                    for uqartist in uqartists) + '.')
-            ###
             choices = None # initialize with this
             while choices is None: # if None there was error, and loop will repeat
                 choices = input('Which artist number(s) should we use (enter 0 for all)?')
