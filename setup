@@ -7,7 +7,7 @@ fi
 if [ -L ~/youtube ]; then
   rm ~/youtube
 fi
-if hash realpath 2>/dev/null; # on my macOS is available
+if hash realpath 2>/dev/null; then # on my macOS is available
   ln -s $(realpath ./metadata) ~/metadata
   ln -s $(realpath ./youtube) ~/youtube
 else # on all Linux distros is available; mac has it but no -f option
