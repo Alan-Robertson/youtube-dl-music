@@ -35,7 +35,6 @@ import sys
 import os
 from enchant import Dict
 import unidecode as ud # converting accents to normal characters
-from collections import defaultdict
 # Dictionary setup
 dictionary = Dict('en_US')
 for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
@@ -50,9 +49,15 @@ storage = os.path.dirname(os.path.realpath(__file__))
 config = f"{storage}/config"
 metaconfig = f"{storage}/metaconfig"
 metanoconfig = f"{storage}/metanoconfig"
+genrelist = f"{storage}/genrelist"
+# Read valid genres
+with open(genrelist,"r") as f:
+    discogs_genres = [s.strip() for s in f.readlines()] # strip removes newline chars
+genrelist = [genre for genre in genrelist # ignore certain genres
+    if genre not in ('Contemporary','Soundtrack','Score')]
 # Read config file
 if not os.path.exists(config):
-    raise IOError("To get metadata, you must add fields to the config file.")
+    raise IOError("To get metadata, you must add fields to a config file called \"config\" in the project directory.")
 with open(config, "r") as file:
     config = file.readlines()
 config = [l.strip().replace("\"",'').replace("'",'') for l in config]
@@ -371,7 +376,6 @@ def guess_album(recordings):
     # members, and by its type (album vs. single, etc.)
     backupdata = None # empty by default
     type_prefs_grouped = (['Album','Single'],['EP'],['Compilation','Other','Soundtrack','NA'],['Live']) #,('Live',)):
-    anglo_countries = ['XW','XE','US','GB','AU','CA','IE'] # have seen "unknown" country show up as japanese/korean
     for itype,type_prefs in enumerate(type_prefs_grouped):
         print(f"Trying albums of type: {', '.join(type_prefs)}.")
         for type_ in type_prefs:
@@ -390,9 +394,12 @@ def guess_album(recordings):
                         # Get the genres
                         # Will prioritize Discogs genres but use MusicBrainz as backup
                         limit = 5 # no more than 5 genres
-                        genres = genres_discogs(group['id'])
+                        added = set() # start empty set
+                        genres = [genre for genre in genres_discogs(group['id'])
+                            if genre not in added and not added.add(genre)] # unique, preserve order
                         if len(genres)<limit:
-                            genres += genres_musicbrainz(group['recordings'])
+                            genres += [genre for genre in genres_musicbrainz(group['recordings'])
+                                if genre not in added and not added.add(genre)] # still preserve order
                         genres = genres[:limit] # won't trigger error if shorter than limit
                         if options['genreonly'] and len(genres)==0:
                             print("No genre available.")
@@ -417,89 +424,6 @@ def guess_album(recordings):
 ################################################################################
 # Functions to get genres from both MusicBrainz and Discogs
 ################################################################################
-def genres_translate(genres, discogs=False):
-    """Translations. Can deal with ambiguous tag names in MusicBrainz database
-    and parse out some undesirable Discogs labels. Only outputs the first N
-    genre tags in the list."""
-    # Run basic translations, so no duplicates of slightly different things
-    badids, newgenres = [], []
-    for g,genre in enumerate(genres):
-        # Translations
-        genre[0] = genre[0].lower() # ensure lower-case
-        genre[0] = genre[0].replace('alt-','alternative ') # consistent spelling
-        genre[0] = genre[0].replace('alt ','alternative ')
-        genre[0] = genre[0].replace('classic','') # sometimes get <something> classic rock
-        genre[0] = genre[0].replace('adult','') # always thought these were weird...
-        genre[0] = genre[0].replace('&',' and ')
-        genre[0] = genre[0].replace('-',' ') # e.g. synth pop
-        if 'aor' in genre[0]: # album-oriented-rock to album-rock
-            genre[0] = 'album rock' # explicit
-        # words = [*set(words)] # have gotten "alternative rock rock"
-        seen, words = set(), genre[0].split() # split by spaces
-        words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
-        if len(words)>0:
-            if words[0]=='r' and len(words)>1:
-                if words[1]=='b':
-                    words = words[:1] + ['and'] + words[1:]
-                if words[1]=='n':
-                    words[1] = 'and'
-            if words[0]=='rock' and len(words)>1: # and words[1]!='and': # except rock & roll
-                if words[1]=='n':
-                    words[1] = 'and'
-                if words[1]=='roll':
-                    words = words[:1] + ['and'] + words[1:]
-                if words[1]!='and': # e.g. rock pop --> pop rock
-                    words = reversed(words)
-        genre[0] = ' '.join(words) # uniform spacing
-        if ' and ' in genre[0]: # and convert back (have fixed spacing now)
-            genre[0] = genre[0].replace('and','&')
-        # Split up labels with slash
-        split = []
-        if '/' in genre[0]:
-            split = genre[0].split('/')
-        elif ';' in genre[0]:
-            split = genre[0].split(';')
-        for newgenre in split:
-            newgenres.append([newgenre,genre[1]])
-            badids.append(g)
-        # Rhythm and blues
-        if 'r & b' in genre[0]:
-            genre[0] = genre[0].replace('r & b','rhythm & blues')
-    # Split up tag labels with slash (/) in them
-    genres = [genre for g,genre in enumerate(genres) if g not in badids]
-    genres = genres + newgenres
-    # Repeat our process of adding counts for duplicate genre names
-    dict_ = {}
-    for genre in genres:
-        try: dict_[genre[0]] += genre[1]
-        except KeyError:
-            dict_[genre[0]] = genre[1]
-    genres = [[name,count] for name,count in dict_.items()] # back to list of lists
-    genres = sorted(genres, key=lambda x: x[1], reverse=True)
-    # And finally filter the managed genre list
-    # Unfortunately we have to do this empirical testing nonsense if we want to assimilate
-    # the MusicBrainz recording "tags" -- they are sometimes actual genres, but often completely useless
-    ignorewords = ['vinyl','cassette','cd','digital','cover', # ...
-            'sad','depressing','happy','angry','bowie',
-            'context','contest','remark','catchy','playback',
-            'genre','collection','original','master','recording','classic','general','oldies','live','track','_',
-            'vocal','dance','revolution','song','early','late','revival','singer','songwriter','club', # ...
-            # 'alternativo','britannique', # spanish
-            '00','90','80','70','60','50','40','30','10','20'] # these aren't even genres; some have them listed
-    ignorematch = ['contemporary','rock','pop','country','alternative'] # often there are better/more descriptive ones available
-    genres = [genre for genre in genres # iterate through pairs
-            if all(dictionary.check(word) for word in genre[0].split()) # make sure words are english
-            and (len(genre[0].split())<=3 if '&' in genre[0] else len(genre[0].split())<=2) # limit 2 words, or "a & b"
-            and not any(i in genre[0] for i in ignorewords) # catches e.g. "oldies", "70's", etc., and
-            and not any(i==genre[0] for i in ignorematch) # catches uninformative names e.g. "pop"
-            and genre[1]>0] # make sure at least one "count" is present
-    # Save genres in Title Case; make a few exceptions (again, from empirical testing)
-    genres = [genre[0].title() for genre in genres] # all genres
-    genres = [genre.replace('Am ','AM ') for genre in genres] # e.g. AM pop
-    # And finally get unique values, preserving order
-    seen = set() # start an empty set
-    genres = [genre for genre in genres if not (genre in seen or seen.add(genre))]
-    return genres # these are now unique!
 def genres_discogs(rgid):
     """Gets the discogs page linked to a release group, and pulls the genre info
     or album artwork from there."""
@@ -542,13 +466,11 @@ def genres_discogs(rgid):
     if len(genres)==0:
         print("No Discogs genres found: none listed under the 'master' release.")
         return []
-    genres = [genre for genre in genres if genre not in ('Contemporary','Soundtrack','Score')]
-    genres = [[genre, 1] for genre in genres] # name, count format
     if options['debug']:
         print(f'Discogs genres discovered:')
-        for genre,count in genres:
-            print(f"{genre.title()}: {count:d}")
-    genres = genres_translate(genres)
+        for genre in genres:
+            print(genre.title())
+    genres = [g for g in genres if g in discogs_genres] # don't want e.g. "Rock"
     if len(genres)==0:
         print("No Discogs genres found: none left after translation.")
         return []
@@ -557,7 +479,8 @@ def genres_discogs(rgid):
 def genres_musicbrainz(recordings):
     """Gets the genres from the MusicBrainz tag-list associated with a list
     of recordings. Ouputs count-genres lists."""
-    # First get list of tags, and create list of tag-count pairs
+    # First get list of tags, and create list of genre-count pairs
+    # Add counts for tags that are duplicated
     tags = {}
     for recording in recordings:
         tagl = recording.get('tag-list',{})
@@ -572,12 +495,85 @@ def genres_musicbrainz(recordings):
         print(f'MusicBrainz genres discovered:')
         for genre,count in genres:
             print(f"{genre.title()}: {count:d}")
-    genres = genres_translate(genres)
+    # Split up strings suspected to contain multiple genres
+    has2, slashgenres = [], []
+    for g,genre in enumerate(genres):
+        split = []
+        if '/' in genre[0]:
+            split = genre[0].split('/')
+        elif ';' in genre[0]:
+            split = genre[0].split(';')
+        for newgenre in split:
+            slashgenres.append([newgenre,genre[1]])
+            has2.append(g)
+    # Now ignore the genre-names with slashes in them, and re-combine from the
+    # slashgenres list
+    genres = [genre for g,genre in enumerate(genres) if g not in has2]
+    genres = genres + slashgenres
+    # Run basic translations; maybe a tag is something we want, just under
+    # slightly different name than Discogs conventions
+    newgenres = []
+    for g,genre in enumerate(genres):
+        # First split up the string into "words"
+        name, count = genre
+        name = name.lower() # ensure lower-case
+        name = name.replace(' and ',' & ') # discogs uses ampersand
+        name = name.replace('&',' & ') # make sure separated by space
+        name = name.replace('-',' ')
+        name = name.replace('-',' ') # different character?
+        seen, words = set(), name.split() # split by spaces
+        words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
+        if len(words)==0:
+            newgenres += [['', 0]]
+            continue
+        # Empirical approaches; edit this as seen fit
+        if words[0]=='alt':
+            words[0] = 'alternative'
+        if words[0]=='r' and words[-1]=='b':
+            words = ['rhythm','&','blues']
+        if words[0]=='rock' and words[-1]=='roll':
+            words = ['rock','&','roll']
+        if words[0]=='progressive':
+            words[0] = 'prog'
+        if 'adult' in words:
+            words = [w for w in words if w!='adult']
+        if 'aor' in words: # aor to album rock
+            words = ['album','rock']
+        if 'classic' in words and 'rock' in words: # sometimes get <something> classic rock
+            words = ['classic','rock']
+        if words[0]=='rock' and len(words)>1: # rock fixes
+            if words[1]!='&': # e.g. rock pop --> pop rock
+                words = reversed(words)
+        name = ' '.join(words) # uniform spacing
+        newgenres += [[name, count]]
+    genres = newgenres
+    # If genre-name is found twice, add their counts
+    genrecount = {}
+    for genre in genres:
+        try: genrecount[genre[0]] += genre[1]
+        except KeyError:
+            genrecount[genre[0]] = genre[1]
+    genres = [[genre,count] for genre,count in genrecount.items()] # back to list of lists
+    genres = sorted(genres, key=lambda x: x[1], reverse=True)
+    # Filter the genre list by Discogs genres, and make sure the too-vague
+    # genres are not included in final output
+    seen = set() # start an empty set
+    standardize = lambda string: ' '.join(re.sub('\W',' ',string).split()).lower() # non-alphenumeric char == \W
+    discogs_std = [standardize(g) for g in discogs_genres] # standard names for comparison
+    genres = [(genre[0].title(), genre[1]) for genre in genres if standardize(genre[0]) in discogs_std
+            and genre[1]>0] # make sure at least one "count" is present
+    genres = [genre for genre in genres if not (genre[0] in seen or seen.add(genre[0]))]
+        # if genre in seen, 2nd statement is not called, but that's ok because
+        # we don't need to re-add it to the set
+    # Now return, and echo message
+    genres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
     if len(genres)==0:
         print("No MusicBrainz genres found: couldn't find any useful recording tags.")
         return []
-    print(f"MusicBrainz genres for writing: {', '.join(genres)}.")
-    return genres
+    else:
+        genres_announce = [f"{genre} ({count:d})" for genre,count in zip(genres,counts)]
+        print(f"MusicBrainz genres for writing: {', '.join(genres_announce)}.")
+        return [*genres]
 
 ################################################################################
 # Function to get "best" artwork from a release group
@@ -590,6 +586,7 @@ def guess_artwork(releases):
     years = [int(release.get('date','0001')[:4]) for release in releases]
     media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
     anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
+    # anglo_countries = ['XW','XE','US','GB','AU','CA','IE']
     # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
         # unknown countries/broad regions seem to be less likely to not have annoying extra border text
         # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
@@ -649,12 +646,12 @@ if __name__ == "__main__":
     filepaths = []
     for arg in sys.argv[1:]:
         if arg.startswith('--'):
-            if arg[2:]=='url': # better than trying implicit search
+            if arg[2:5]=='url': # better than trying implicit search
                 url = arg[2:].split('=')
                 if len(url)==1:
                     raise ValueError("Invalid url argument.")
                 url = ''.join(url[1:]) # re-combine after the first = sign
-            if arg[2:] not in options: # searches keys by default
+            elif arg[2:] not in options: # searches keys by default
                 raise ValueError("Invalid '--' argument.")
             options[arg[2:]] = True # option enabled
         else:
