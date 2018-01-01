@@ -356,8 +356,9 @@ def guess_album(recordings):
         group['titles'] = [*{release.get('title','') for release in group['releases']}]
     # Get the recording year as simply the earliest date-release amongst releases in the release group
     # Will get the title in the loop below
-    year = str(min(min(group['years']) for group in groups))
     title = None
+    year = str(min(min(group['years']) if len(group['years'])>0 else 9999 for group in groups))
+    year = '' if year=='9999' else year
     # Get some helper info: need to sort groups by earliest 'official' release year among its release
     # members, and by its type (album vs. single, etc.)
     backupdata = None # empty by default
