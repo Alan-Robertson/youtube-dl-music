@@ -76,6 +76,13 @@ mb.auth(config['username'], config['password'])
 mb.set_useragent('Self', 'NA', contact=config.get('contact',''))
 # Config Discogs
 client = discogs_client.Client('Personal', user_token=config['token'])
+# Some global options
+media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
+anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
+# anglo_countries = ['XW','XE','US','GB','AU','CA','IE']
+# anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
+    # unknown countries/broad regions seem to be less likely to not have annoying extra border text
+    # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
 
 ################################################################################
 # Helper functions
@@ -99,9 +106,24 @@ def findurls(page):
     if start_link == -1:
         return None, 0
     start_quote = page.find('"', start_link)
-    end_quote = page.find('"', start_quote + 1)
-    url = page[start_quote + 1: end_quote]
+    end_quote = page.find('"', start_quote+1)
+    url = page[start_quote+1:end_quote]
     return url, end_quote
+def findstyles():
+    # Get Discogs styles
+    # Need to convert non-ASCII characters back to unicode
+    # See 1st comment on this answer: https://stackoverflow.com/a/5187097/4970632 
+    data = ''
+    prefix = 'https://reference.discogslabs.com/browse/style?page='
+    for page in range(1,11+1):
+        content = requests.get(prefix+str(page)).content # is type 'bytes'
+        data += BeautifulSoup(content, 'lxml').decode() # is type 'string'
+    end_keys = [m.end() for m in re.finditer("\"title\":", data)]
+    start_quotes = [data.find('"',k) for k in end_keys]
+    end_quotes = [data.find('"',q+1) for q in start_quotes]
+    styles = [data[s+1:e] for s,e in zip(start_quotes,end_quotes)]
+    styles = [bytes(s,'utf-8').decode('unicode_escape') for s in styles]
+    return styles
 
 ################################################################################
 # Function to get recording data from just the simple artist-recording names
@@ -325,53 +347,17 @@ def guess_album(recordings):
         group['recordings'] = grecordings
         groups.append(group)
     print(f"{len(releases):d} releases consolidated into {len(groups)} release groups ({duplicates:d} duplicates removed).")
-    # Figure out the best title to write to file; generally the title corresponding to earliest
-    # release year should be a good bet; don't get it from same release as album art (might be another language)
-    titles = [release.get('title','') for group in groups for release in group['releases']]
-    tyears = [int(release.get('date','9999')[:4]) for group in groups for release in group['releases']]
-    ftitles = [title for y,title in zip(tyears,titles) if y>1900 and y<2100] # account for weird error sometimes
-    ftyears = [y for y in tyears if y>1900 and y<2100] # account for weird error sometimes
-    if len(ftitles)>0: # have more than one valid "year" info
-        title = ftitles[ftyears.index(min(ftyears))] # earliest year
-        year = str(min(ftyears)) # minimum year
-    elif len(titles)>0: # can pick shortest one
-        title = min(titles, key=len) # and that's that!
-        year = "" # no useful year info
-    else:
-        raise ValueError("No titles found.")
-    # Get some extra information: first and last years of release for releases in each relase group,
-    # and the number of release in each group. Will use these later.
-    year1s = [min(int(release.get('date','9999')[:4]) for release in group['releases']) for group in groups]
-    yearfs = [max(int(release.get('date','0001')[:4]) for release in group['releases']) for group in groups]
-    year1s = [9999 if year<1900 else year for year in year1s] # saw a year=1 once (inexplicably)
-    yearfs = [9999 if year<1900 else year for year in yearfs] # saw a year=1 once (inexplicably)
-    counts = [len(group['releases']) for group in groups]
-    for year1,yearf,count,group in zip(year1s,yearfs,counts,groups):
-        group['year1'] = year1
-        group['yearf'] = yearf
-        group['count'] = count
-        group['titles'] = list(set(release.get('title','') for release in group['releases']))
-    # for year1 in sorted(set(group['year1'] for group in groups)):
-    #     groupsA = [group for group in groups if group['year1']==year1]
-    #     # Sort by release type
-    #     for type_prefs in type_prefs_grouped:
-    #         for type_ in type_prefs:
-    #             groupsB = [group for group in groupsA if group.get('type','NA')==type_]
-    #             # Sort by number of releases in group
-    #             for count in sorted(set(counts), reverse=True):
-    #                 groupsC = [group for group in groupsB if group['count']==count]
-    # for type_prefs in type_prefs_grouped:
-    #     # # Sort by first year in group, then by release type
-    #     # for year1 in sorted(set(year1s)): # a sorted test returns LIST!
-    #     #     groupsA = [group for y,group in zip(year1s,groups) if y==year1]
-    #     for type_ in type_prefs:
-    #         groupsA = [group for group in groups if group.get('type','NA')==type_]
-    #         # Sort by number of releases in group
-    #         for count in sorted(set(counts), reverse=True):
-    #             groupsB = [group for group in groupsA if group['count']==count]
-    #             # And sort by year
-    #             for year1 in sorted(set(group['year1'] for group in groups)):
-    #                 groupsC = [group for group in groupsB if group['year1']==year1]
+    # Add new information to the original release-group dictionaries
+    # This information will be used to sort albums by a hieararchy of preferred characteristics
+    for group in groups:
+        group['count'] = len(group['releases'])
+        group['years'] = [int(release.get('date','9999')[:4]) for release in group['releases']]
+        group['years'] = [*{year for year in group['years'] if 1900<year<2100}]
+        group['titles'] = [*{release.get('title','') for release in group['releases']}]
+    # Get the recording year as simply the earliest date-release amongst releases in the release group
+    # Will get the title in the loop below
+    year = str(min(min(group['years']) for group in groups))
+    title = None
     # Get some helper info: need to sort groups by earliest 'official' release year among its release
     # members, and by its type (album vs. single, etc.)
     backupdata = None # empty by default
@@ -380,15 +366,20 @@ def guess_album(recordings):
         print(f"Trying albums of type: {', '.join(type_prefs)}.")
         for type_ in type_prefs:
             groupsA = [group for group in groups if group.get('type','NA')==type_]
-            for year1 in sorted(set(group['year1'] for group in groupsA)):
-                groupsB = [group for group in groupsA if group['year1']==year1]
+            for firstyear in sorted(set(min(group['years']) for group in groupsA)):
+                groupsB = [group for group in groupsA if min(group['years'])==firstyear]
                 # Sort by number of releases in group
-                for count in sorted(set(counts), reverse=True):
+                for count in sorted(set(group['count'] for group in groupsB), reverse=True):
                     groupsC = [group for group in groupsB if group['count']==count]
                     for group in groupsC:
-                        # Confirm user wants to use this album
+                        # Get the title; choose as the title of a release in the PREFERRED
+                        # group for getting artwork; not the first one that actually has artwork
+                        if title is None:
+                            title = min((title for title in group['titles'] if
+                                group.get('country','NA') in anglo_countries), key=len)
+                        # Confirm user wants to use this album for artwork
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
-                            f"count {group['count']}, earliest year '{group['year1']}', latest year '{group['yearf']}'.")
+                            f"count {group['count']}, earliest year '{min(group['years'])}', latest year '{max(group['years'])}'.")
                         if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
                         # Get the genres
@@ -431,7 +422,7 @@ def genres_discogs(rgid):
     url = f"https://musicbrainz.org/release-group/{rgid}"
     try: content = requests.get(url).content
     except ConnectionError:
-        raise ValueError('Seems to be invalid release-group id :(')
+        raise ValueError('MusicBrainz release-group ID appears to be invalid.')
     page = BeautifulSoup(content, 'lxml').decode() # converts to string
     # Parse HTMl page to get the discogs id
     # From: https://stackoverflow.com/questions/15517483/how-to-extract-urls-from-an-html-page-in-python
@@ -566,14 +557,14 @@ def genres_musicbrainz(recordings):
         # if genre in seen, 2nd statement is not called, but that's ok because
         # we don't need to re-add it to the set
     # Now return, and echo message
-    genres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
-    if len(genres)==0:
-        print("No MusicBrainz genres found: couldn't find any useful recording tags.")
-        return []
-    else:
+    if len(genres)>0:
+        genres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
         genres_announce = [f"{genre} ({count:d})" for genre,count in zip(genres,counts)]
         print(f"MusicBrainz genres for writing: {', '.join(genres_announce)}.")
         return [*genres]
+    else:
+        print("No MusicBrainz genres found: couldn't find any useful recording tags.")
+        return []
 
 ################################################################################
 # Function to get "best" artwork from a release group
@@ -584,12 +575,6 @@ def guess_artwork(releases):
     are the only available digital copies. Maybe just ignore asian countries?"""
     # First, go by release medium
     years = [int(release.get('date','0001')[:4]) for release in releases]
-    media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
-    anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
-    # anglo_countries = ['XW','XE','US','GB','AU','CA','IE']
-    # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
-        # unknown countries/broad regions seem to be less likely to not have annoying extra border text
-        # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
     filter_known = [False for release in releases] # want to catch any unknown media
     for m,medium in enumerate(media_pref):
         if medium=='other': # we are at the end; see if any media were left
