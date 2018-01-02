@@ -33,13 +33,13 @@ import pandas as pd
 import re # needed later
 import sys
 import os
-from enchant import Dict
 import unidecode as ud # converting accents to normal characters
-# Dictionary setup
-dictionary = Dict('en_US')
-for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
-    dictionary.add(exception) # not in dictionary, but we allow it
-        # also need to add ampersand, because returns False
+# Dictionary setup (no longer implemented)
+# from enchant import Dict
+# dictionary = Dict('en_US')
+# for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
+#     dictionary.add(exception) # not in dictionary, but we allow it
+#         # also need to add ampersand, because returns False
 
 ################################################################################
 # Configure
@@ -355,14 +355,15 @@ def guess_album(recordings):
         group['years'] = [*{year for year in group['years'] if 1900<year<2100}]
         group['years'] = [9999] if len(group['years'])==0 else group['years']
         group['titles'] = [*{release.get('title','') for release in group['releases']}]
-    # Get the recording year as simply the earliest date-release amongst releases in the release group
-    # Will get the title in the loop below
-    title = None
+    # 1) Get the recording year as simply the earliest date-release amongst releases in the release group
+    # Will get the title in the loop below, and same for genres
     year = str(min(min(group['years']) for group in groups))
     year = '' if year=='9999' else year
     # Get some helper info: need to sort groups by earliest 'official' release year among its release
     # members, and by its type (album vs. single, etc.)
-    backupdata = None # empty by default
+    genres = [] # start empty
+    title = None # initialize
+    metadata = None # initialize
     type_prefs_grouped = (['Album','Single'],['EP'],['Compilation','Other','Soundtrack','NA'],['Live']) #,('Live',)):
     for itype,type_prefs in enumerate(type_prefs_grouped):
         print(f"Trying albums of type: {', '.join(type_prefs)}.")
@@ -374,45 +375,52 @@ def guess_album(recordings):
                 for count in sorted(set(group['count'] for group in groupsB), reverse=True):
                     groupsC = [group for group in groupsB if group['count']==count]
                     for group in groupsC:
-                        # Get the title; choose as the title of a release in the PREFERRED
+                        # 2) Get the title; choose as the title of a release in the PREFERRED
                         # group for getting artwork; not the first one that actually has artwork
                         if title is None:
                             title = min((title for title in group['titles'] if
                                 group.get('country','NA') in anglo_countries), key=len)
-                        # Confirm user wants to use this album for artwork
+                        # 3) Get the genres, if haven't found them yet
+                        # Will prioritize Discogs genres but use MusicBrainz as backup
+                        if len(genres)==0:
+                            added = set() # start empty set
+                            dgenres = [genre for genre in genres_discogs(group['id'])
+                                if genre not in added and not added.add(genre)] # unique, preserve order
+                            mgenres = [genre for genre in genres_musicbrainz(group['recordings'])
+                                if genre not in added and not added.add(genre)] # still preserve order
+                            # Limit results: match number of MusicBrainz with number Discogs, say
+                            if len(dgenres)==0:
+                                limit = 3
+                                genres = mgenres[:limit]
+                            else:
+                                genres = dgenres + mgenres[:len(dgenres)]
+                        # Set up return dictionary
+                        metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
+                        # Optional exits for case where only want genres
+                        if options['genreonly']:
+                            if len(genres)==0:
+                                print("No genres available.")
+                                continue
+                            else:
+                                return metadata
+                        # 4) Next the album artwork
+                        # First confirm user wants to use this album for artwork
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
                             f"count {group['count']}, earliest year '{min(group['years'])}', latest year '{max(y for y in group['years'] if y!=9999)}'.")
                         if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
-                        # Get the genres
-                        # Will prioritize Discogs genres but use MusicBrainz as backup
-                        limit = 5 # no more than 5 genres
-                        added = set() # start empty set
-                        genres = [genre for genre in genres_discogs(group['id'])
-                            if genre not in added and not added.add(genre)] # unique, preserve order
-                        if len(genres)<limit:
-                            genres += [genre for genre in genres_musicbrainz(group['recordings'])
-                                if genre not in added and not added.add(genre)] # still preserve order
-                        genres = genres[:limit] # won't trigger error if shorter than limit
-                        if options['genreonly'] and len(genres)==0:
-                            print("No genre available.")
+                        image = guess_artwork(group['releases'])
+                        if image is None:
+                            print("No album artwork available.")
                             continue
-                        # Backup data; use if can't find any images
-                        metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
-                        if backupdata is None:
-                            backupdata = metadata
-                        # Get album art
-                        if not options['genreonly']:
-                            image = guess_artwork(group['releases'])
-                            if image is None:
-                                print("No album artwork available.")
-                                continue
+                        else:
                             metadata.update({'image':image})
-                        return metadata
-    print('Failed to find album artwork.')
-    if backupdata is None:
+                            return metadata
+    # Exit from here if failed to get artwork every time
+    print("Failed to find album artwork.")
+    if metadata is None:
         raise ValueError("No metadata to write.")
-    return backupdata
+    return metadata
 
 ################################################################################
 # Functions to get genres from both MusicBrainz and Discogs
@@ -513,29 +521,27 @@ def genres_musicbrainz(recordings):
         name = name.replace(' and ',' & ') # discogs uses ampersand
         name = name.replace('&',' & ') # make sure separated by space
         name = name.replace('-',' ')
-        name = name.replace('-',' ') # different character?
         seen, words = set(), name.split() # split by spaces
         words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
         if len(words)==0:
             newgenres += [['', 0]]
             continue
-        # Empirical approaches; edit this as seen fit
-        if words[0]=='alt':
+        # Empirical approaches; cast look-alike labels into the Discogs
+        # conventions
+        if words[0]=='alt': # no abbreviation in Discogs list
             words[0] = 'alternative'
-        if words[0]=='r' and words[-1]=='b':
-            words = ['rhythm','&','blues']
-        if words[0]=='rock' and words[-1]=='roll':
-            words = ['rock','&','roll']
-        if words[0]=='progressive':
+        if words[0]=='progressive': # here Discogs does use abbreviation
             words[0] = 'prog'
-        if 'adult' in words:
-            words = [w for w in words if w!='adult']
-        if 'aor' in words: # aor to album rock
+        if words[0]=='r' and words[-1]=='b': # correct e.g. r n' b
+            words = ['rhythm','&','blues']
+        if words[0]=='rock' and words[-1]=='roll': # correct e.g. rock n' roll
+            words = ['rock','&','roll']
+        if 'aor' in words: # AOR == album rock
             words = ['album','rock']
         if 'classic' in words and 'rock' in words: # sometimes get <something> classic rock
             words = ['classic','rock']
-        if words[0]=='rock' and len(words)>1: # rock fixes
-            if words[1]!='&': # e.g. rock pop --> pop rock
+        if words[0]=='rock' and len(words)>1: # e.g. rock pop --> pop rock
+            if words[1]!='&':
                 words = reversed(words)
         name = ' '.join(words) # uniform spacing
         newgenres += [[name, count]]
@@ -548,17 +554,20 @@ def genres_musicbrainz(recordings):
             genrecount[genre[0]] = genre[1]
     genres = [[genre,count] for genre,count in genrecount.items()] # back to list of lists
     genres = sorted(genres, key=lambda x: x[1], reverse=True)
-    # Filter the genre list by Discogs genres, and make sure the too-vague
-    # genres are not included in final output
+    # Filter the genre list by Discogs genres: compare where alphanumeric characters
+    # match a Discogs style, then use the exact Discogs convention for punctuation
+    # and capitalization in the discogs_genres list
     seen = set() # start an empty set
     standardize = lambda string: ' '.join(re.sub('\W',' ',string).split()).lower() # non-alphenumeric char == \W
     discogs_std = [standardize(g) for g in discogs_genres] # standard names for comparison
-    genres = [(genre[0].title(), genre[1]) for genre in genres if standardize(genre[0]) in discogs_std
+    genres = [(discogs_genres[discogs_std.index(standardize(genre[0]))], genre[1])
+            for genre in genres if standardize(genre[0]) in discogs_std
             and genre[1]>0] # make sure at least one "count" is present
     genres = [genre for genre in genres if not (genre[0] in seen or seen.add(genre[0]))]
         # if genre in seen, 2nd statement is not called, but that's ok because
         # we don't need to re-add it to the set
     # Now return, and echo message
+    # Preserved counts until this point, so message is more informative
     if len(genres)>0:
         genres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
         genres_announce = [f"{genre} ({count:d})" for genre,count in zip(genres,counts)]
@@ -676,8 +685,10 @@ if __name__ == "__main__":
         ########################################################################
         print(f"Retrieving metadata for \"{artist} - {recording}\"...")
         artist, recordings = guess_recordings(artist, recording) # pull just the recordings
-        albumprops = guess_album(recordings) # pull album year, artwork, and genres
         recording = recordings[0]['title'] # just use the first one
+        albumprops = guess_album(recordings) # pull album year, artwork, and genres
+        if albumprops is None:
+            raise ValueError("Found no metadata.")
         # Special options for just tagging genres
         if options['genreonly']:
             print(f"Adding genres: '{albumprops['genres']}'")
