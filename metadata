@@ -353,11 +353,12 @@ def guess_album(recordings):
         group['count'] = len(group['releases'])
         group['years'] = [int(release.get('date','9999')[:4]) for release in group['releases']]
         group['years'] = [*{year for year in group['years'] if 1900<year<2100}]
+        group['years'] = [9999] if len(group['years'])==0 else group['years']
         group['titles'] = [*{release.get('title','') for release in group['releases']}]
     # Get the recording year as simply the earliest date-release amongst releases in the release group
     # Will get the title in the loop below
     title = None
-    year = str(min(min(group['years']) if len(group['years'])>0 else 9999 for group in groups))
+    year = str(min(min(group['years']) for group in groups))
     year = '' if year=='9999' else year
     # Get some helper info: need to sort groups by earliest 'official' release year among its release
     # members, and by its type (album vs. single, etc.)
@@ -367,7 +368,7 @@ def guess_album(recordings):
         print(f"Trying albums of type: {', '.join(type_prefs)}.")
         for type_ in type_prefs:
             groupsA = [group for group in groups if group.get('type','NA')==type_]
-            for firstyear in sorted(set(min(group['years']) for group in groupsA)):
+            for firstyear in sorted(set(min(group['years']) for group in groupsA)): # note min([None])==None
                 groupsB = [group for group in groupsA if min(group['years'])==firstyear]
                 # Sort by number of releases in group
                 for count in sorted(set(group['count'] for group in groupsB), reverse=True):
@@ -380,7 +381,7 @@ def guess_album(recordings):
                                 group.get('country','NA') in anglo_countries), key=len)
                         # Confirm user wants to use this album for artwork
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
-                            f"count {group['count']}, earliest year '{min(group['years'])}', latest year '{max(group['years'])}'.")
+                            f"count {group['count']}, earliest year '{min(group['years'])}', latest year '{max(y for y in group['years'] if y!=9999)}'.")
                         if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
                         # Get the genres
