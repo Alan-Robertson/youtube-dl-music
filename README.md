@@ -17,9 +17,9 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
-Before using the `youtube` you need to simply install the command-line dependencies listed below. That's it.
+To use **`youtube`** you simply need to install the command-line dependencies listed below. That's it.
 
-The `metadata` script is complex -- if you just want to download music without tagging it, comment out the final line in `youtube`. To use `metadata`, you need to do the following:
+To use **`metadata`** a few more steps are required (if you just want to download music without tagging it, comment out the final line in `youtube`):
 
   1. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. The `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
   2. Run the `setup` command. This does the following:
