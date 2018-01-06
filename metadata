@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This script adds metadata from the MusicBrainz database based on the <artist> - <title> 
 from so-formatted audio files. If file is not AAC/MP4 (iTunes default), will use ID3v2.4 header; 
