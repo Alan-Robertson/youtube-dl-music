@@ -36,6 +36,7 @@ If you just want to download the `m4a` files and do nothing else, comment out pa
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`.
 
 ## Python Package Dependencies
+Simply run the command **pysetup** to install the necessary python packages. Here's a brief description of them, and instructions for installing them by-hand.
   * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata; `conda install mutagen` (any anaconda distribution) or `pip install mutagen`.
   * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database; `pip install musicbrainzngs`.
   * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database; `pip install discogs_client`.
