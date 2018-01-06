@@ -48,8 +48,8 @@ If you just want to download the `m4a` files and do nothing else, comment out pa
 
     youtube <URL> <filename>
 
-Filename can have un-escaped spaces. Escape any quotes/apostrophes. Metadata will be INFERRED from 
-filename with the `metadata` script if you follow the format `<artist> - <song>`; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
+Filename can have un-escaped spaces. Escape any quotes/apostrophes. **Metadata will be inferred from 
+filename with the `metadata` script if you follow the format `<artist> - <song>`**; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
 ## Usage of metadata script
 The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existing files. Usage is as follows:
