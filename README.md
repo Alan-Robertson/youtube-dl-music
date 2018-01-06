@@ -106,13 +106,11 @@ Here's a play-by-play of what the metadata script does:
     * Allows for names ending with "&" or "and" something (e.g. "Tom Petty *and the Heartbreakers*").
     * Write "artist" metadata according to the search results.
 2. Verify the recordings returned, eliminate some matches but permit others. In general, make sure "meaningful words" in the discovered recording names match the filename-inferred song name.
-    * Ignores "Comfortably Numb (remix)" in search for "Comfortably Numb".
     * Ignores "Atom Heart Mother" or "Matilda Mother" but allows "Mother".
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
     * Allows "Hush / I'm Alive" in search for "Hush" by choosing optional match on stuff either side of "/".
-    * Write "title" metadata according to the search results.
 3. Get release "groups" from the release list belonging to each recording, and consolidate the recordings (sorted by unique ID) into their corresponding release groups.
-    * Sort the release groups first according to a clever ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
+    * Sort the release groups first according to a ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
 4. Get several *album-related* metadata categories from our ordered hierarchy of releases belonging to unique release groups.
     * Write "year" metadata from the earliest release amongst all members of *all* release groups.
     * Write "album name" metadata from the earliest release amongst all members of the highest-ranked release group.
