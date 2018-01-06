@@ -92,7 +92,7 @@ anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
 ################################################################################
 def yesno():
     # Requests user yes/no input and parses
-    if options['noconfirm']:
+    if not options['confirm']:
         return True
     while True: # just keep going until get valid one
         response = input('Confirm (y/n)?')
@@ -413,8 +413,8 @@ def guess_album(recordings):
                         checkyears = [-1] if len(checkyears)==0 else checkyears
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
                             f"count {group['count']}, earliest year '{min(checkyears)}', latest year '{max(checkyears)}'.")
-                        if not yesno():
-                            continue # only calls yesno() if noconfirm is False! neat, huh?
+                        if not yesno(): # yesno() just returns True if "confirm" is False
+                            continue
                         image = guess_artwork(group['releases'])
                         if image is None:
                             print("No album artwork available.")
@@ -655,7 +655,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     ############################################################################
     url = '' # by default, write nothing
-    options = ['filter', 'genreonly', 'noconfirm', 'forget', 'debug']
+    options = ['filter', 'genreonly', 'confirm', 'forget', 'debug']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:

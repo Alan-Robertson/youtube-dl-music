@@ -67,11 +67,11 @@ The metadata script is called automatically by `youtube` but you may want to use
 This time the filename(s) must have escaped spaces. The following flag options are available:
 
 * `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
-* `--noconfirm`: Do not prompt user to confirm the release group. The `youtube` script uses this flag but the thinking is, if a user calls metadata manually, they may want more control.
-* `--genreonly`: Only add genre metadata, nothing else. Because this functionatlity can be grealy improved, this flag was added as a way to quickly test things.
+* `--confirm`: Prompt user to confirm release group/release to be used for artwork.
+* `--genreonly`: Only add genre metadata, nothing else.
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
-* `--filter`: Do not filter recordings by name.
-* `--debug`: Echo some extra information during downloading process.
+* `--filter`: Extra filter on artist names and recording names. Probably excessive; may be removed.
+* `--debug`: Echo some extra information during tagging process.
 
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
 
@@ -115,7 +115,7 @@ Here's a play-by-play of what the metadata script does:
         * Retrieves the Discogs page of corresponding "master" by searching the MusicBrainz `html` webpage for a linked Discogs "master" ID (not currently implemented in the python API).
         * Also write "genres" from the MusicBrainz "tags" associated with individual recordings.
         * Permitted names are the Discogs "styles" found in the `genrelist` file. Does not allow overly generic names like "rock" and "pop".
-    * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in the highest-ranked release group. This gets the nicest-looking cover art available. Unless `--noconfirm` was passed, user can choose to bypass release groups/releases for artwork.
+    * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in the highest-ranked release group. This gets the nicest-looking cover art available. If `--confirm` was passed, user can choose to bypass release groups/releases for artwork.
 
 ## Suggestions for Playback Software
 ### On macOS

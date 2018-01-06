@@ -50,5 +50,5 @@ mv "$directory/normalized-$name.m4a" "$path"
 
 # Change metadata using python function
 # Do this quickly, so don't ask for user confirmation
-metadata --noconfirm --url="$url" "$path"
+metadata --url="$url" "$path"
 
