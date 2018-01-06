@@ -37,13 +37,20 @@ If you just want to download the `m4a` files and do nothing else, comment out pa
 
 ## Python Package Dependencies
 Simply run the command **pysetup** to install the necessary python packages. Here's a brief description of them, and instructions for installing them by-hand.
-  * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata; `conda install mutagen` (any anaconda distribution) or `pip install mutagen`.
-  * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database; `pip install musicbrainzngs`.
-  * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database; `pip install discogs_client`.
-  * [BeautifulSoup](https://pypi.python.org/pypi/beautifulsoup4): for parsing the "release group" HTML webpage and finding any linked discogs "master releases"; `pip install bs4`. Necessary because there is no way of retreiving this link from the MusicBrainz API directly.
-  * [pandas](https://github.com/pandas-dev/pandas): for inputting/outputting tabulated data; `pip install pandas`.
-  * [Python Imaging Library](https://pypi.python.org/pypi/PIL): for warping Album Art images; `pip install PIL`.
-  * [unidecode](https://pypi.python.org/pypi/Unidecode): for translating accented characters to ASCII, so you don't have to get accents perfectly correct in your filename; `pip install unidecode`.
+  * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata.
+  * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database.
+  * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database.
+  * [BeautifulSoup](https://pypi.python.org/pypi/beautifulsoup4): for parsing the "release group" HTML webpage and finding any linked discogs "master releases". Necessary because there is no way of retreiving this link from the MusicBrainz API directly.
+  * [pandas](https://github.com/pandas-dev/pandas): for inputting/outputting tabulated data.
+  * [Python Imaging Library](https://pypi.python.org/pypi/PIL): for warping cover art images to square.
+  * [unidecode](https://pypi.python.org/pypi/Unidecode): for translating accented characters to ASCII, so you don't have to get accents perfectly correct in your filename.
+  <!-- * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata; `conda install mutagen` (any anaconda distribution) or `pip install mutagen`. -->
+  <!-- * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database; `pip install musicbrainzngs`. -->
+  <!-- * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database; `pip install discogs_client`. -->
+  <!-- * [BeautifulSoup](https://pypi.python.org/pypi/beautifulsoup4): for parsing the "release group" HTML webpage and finding any linked discogs "master releases"; `pip install bs4`. Necessary because there is no way of retreiving this link from the MusicBrainz API directly. -->
+  <!-- * [pandas](https://github.com/pandas-dev/pandas): for inputting/outputting tabulated data; `pip install pandas`. -->
+  <!-- * [Python Imaging Library](https://pypi.python.org/pypi/PIL): for warping Album Art images; `pip install PIL`. -->
+  <!-- * [unidecode](https://pypi.python.org/pypi/Unidecode): for translating accented characters to ASCII, so you don't have to get accents perfectly correct in your filename; `pip install unidecode`. -->
 
 ## Usage
 
