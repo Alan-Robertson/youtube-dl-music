@@ -17,19 +17,20 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
-Before using the `youtube` and `metadata` tools, you need to do the following:
+Before using the `youtube` you need to simply install the command-line dependencies listed below. That's it.
 
-  1. Install command-line tools needed for `youtube` (see below).
-  2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. The `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
-  3. Run the `setup` command. This does the following:
+The `metadata` script is complex -- if you just want to download music without tagging it, comment out the final line in `youtube`. To use `metadata`, you need to do the following:
+
+  1. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. The `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
+  2. Run the `setup` command. This does the following:
       * Installs the python packages needed for `metadata` (see below).
       * Creates a file named `config` in the youtubetag directory.
-  4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+  2. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
+  3. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
       * To set the download location: `directory = <your music folder here>`.
       * **Create a Discogs account** and create a token for the API; add that to `config` with `token = <your token here>`.
       * **Create a MusicBrainz account** and the API simply uses your account username and password; add them to `config` with `username = <your username here>` and `password = <your password here>`.
 
-Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
 
 If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 <!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
