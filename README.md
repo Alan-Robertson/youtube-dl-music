@@ -26,11 +26,11 @@ The `metadata` script is complex -- if you just want to download music without t
       * Installs the python packages needed for `metadata` (see below).
       * Creates a file named `config` in the youtubetag directory.
   2. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
-  3. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+      * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the **Generate token** button.
+  4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
       * To set the download location: `directory = <your music folder here>`.
-      * **Create a Discogs account** and create a token for the API; add that to `config` with `token = <your token here>`.
-      * **Create a MusicBrainz account** and the API simply uses your account username and password; add them to `config` with `username = <your username here>` and `password = <your password here>`.
-
+      * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
+      * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
 
 If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 <!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
