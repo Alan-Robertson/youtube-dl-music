@@ -22,12 +22,12 @@ Before using the `youtube` and `metadata` tools, you need to do the following:
   1. Install command-line dependencies described below.
   2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. the `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
   3. Run the `setup` command. This does the following:
-    * Installs the python packages needed for the `metadata` script, if they are not already installed (see below for description).
-    * Creates a file named `config` in the youtubetag directory.
+      * Installs the python packages needed for the `metadata` script, if they are not already installed (see below for description).
+      * Creates a file named `config` in the youtubetag directory.
   4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
-    * To set the download location: `directory = <your music folder here>`.
-    * **Create a Discogs account** and create a token for the API; add that to `config` with `token = <your token here>`.
-    * **Create a MusicBrainz account** and the API simply uses your account username and password; add them to `config` with `username = <your username here>` and `password = <your password here>`.
+      * To set the download location: `directory = <your music folder here>`.
+      * **Create a Discogs account** and create a token for the API; add that to `config` with `token = <your token here>`.
+      * **Create a MusicBrainz account** and the API simply uses your account username and password; add them to `config` with `username = <your username here>` and `password = <your password here>`.
 
 Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
 
