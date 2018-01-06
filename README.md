@@ -97,15 +97,16 @@ Here's a play-by-play of what the metadata script does:
     * Allows "The Wall (part 1)" or "The Wall (part i)" for search for "The Wall".
     * Allows "Hush / I'm Alive" in search for "Hush" by choosing optional match on stuff either side of "/".
     * Write "title" metadata according to the search results.
-3. Get release "groups" from the release list belonging to each recording, and consolidate the recordings (sorted by unique ID) into their corresponding release groups. Then choose a release group for gathering information.
+3. Get release "groups" from the release list belonging to each recording, and consolidate the recordings (sorted by unique ID) into their corresponding release groups.
     * Sort the release groups first according to a clever ranking scheme. Every release group has an associated "category", so try to pick singles and albums over compilations or live performances. Also try to pick release groups with releases from earlier years (which are more likely to be "original" versions).
-    * Prompt user to confirm a release group unless `--noconfirm` was passed. User will see some metadata associated with the release group.
 4. Get several *album-related* metadata categories from our ordered hierarchy of releases belonging to unique release groups.
     * Write "year" metadata from the earliest release amongst all members of *all* release groups.
-    * Choose a release group based on some preference criteria (prefer Albums and Singles to Compilations, for example).
-    * Write "album name" metadata from the earliest release amongst all members of this release group.
-    * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in release group. This gets the nicest-looking cover art available.
-    * Write "genres" from Discogs page of corresponding "master" by searching the MusicBrainz `html` webpage for a linked Discogs "master" ID (not currently implemented in the python API). Also write "genres" from the MusicBrainz "tags" associated with individual recordings (the "tags" have comparatively poor standarization, and so are heavily filtered first). Allowed names are the Discogs "styles" found in the `genrelist` file. Does not allow overly generic names like "rock" and "pop".
+    * Write "album name" metadata from the earliest release amongst all members of the highest-ranked release group.
+    * Write "genres" from the first release group in hierarchy for which genres are available.
+        * Retrieves the Discogs page of corresponding "master" by searching the MusicBrainz `html` webpage for a linked Discogs "master" ID (not currently implemented in the python API).
+        * Also write "genres" from the MusicBrainz "tags" associated with individual recordings.
+        * Permitted names are the Discogs "styles" found in the `genrelist` file. Does not allow overly generic names like "rock" and "pop".
+    * Write "cover art" metadata from the most *modern* release and most *modern* release format amongst releases in the highest-ranked release group. This gets the nicest-looking cover art available. Unless `--noconfirm` was passed, user can choose to bypass release groups/releases for artwork.
 
 ## Suggestions for Playback Software
 ### On macOS
