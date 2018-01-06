@@ -78,9 +78,8 @@ This time the filename(s) must have escaped spaces. The following flag options a
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
 * `--relaxed`: Do not attempt extra filter on recording names. May be desirable in some cases, but will fail (e.g.) with differentiating Pink Floyd - Mother from Pink Floyd - Matilda Mother.
 
-This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
-
-Instead, it is designed to **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate.
+This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
+<!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->
 
 <!-- You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want. -->
 <!-- , only have a guess at the approximate artist name (e.g. we say `Animals` or `Tom Petty` but want recordings under `The Animals` or `Tom Petty and the Heartbreakers`). -->
