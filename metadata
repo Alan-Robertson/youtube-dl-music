@@ -173,19 +173,6 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             print(f'Integer must be <={N}.')
             return None
         return choices
-    def fixartist(artist):
-        # Helper function that does a special artist-name translation
-        # Different from the "words" function; that is meant to deal with punctuation
-        # and accents and stuff. This is generally empirical.
-        if '“' in artist and '”' in artist: # e.g. Haywire “Haywire Mac” McClintoc
-            artist = artist.split('“')[0] + artist.split('”')[-1]
-        if '∆' in artist: # stylized-name does not match database-name often
-            artist = re.sub('[∆]','A',artist)
-        if artist=='Chet Faker': # all releases are under this name in database
-            artist = 'Nick Murphy'
-        if artist=='Hall and Oates': # listed separately for some reason
-            artist = 'Daryl Hall and John Oates'
-        return artist
     # Premature track and artist filtering, so the "strict search" will give
     # reasonable results.
     artist = artist.split('ft.')[0] # get first artist in name; they will be credited separately
@@ -195,12 +182,6 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     # (Step 0) Search the database with a strict search, results should be pretty darn good
     # Results will have list of artist dictionaries under the "artist-credit" fields
     # For some reason each artist dictionary is embedded in a singleton dictionary with key "artist"
-    # searchrecording = ' '.join([w for w in recording.split() # empirical hack; sometimes use wrong article/prep
-    #     if w.lower() not in ['a','in','the','on','of','and','or','for']])
-    # TODO: Apparently strict search actually requires EXACT NAME-MATCH of file but somehow
-    # can accept some VARIATIONS in artist name (had some examples)... actually THAT'S WRONG because
-    # search for "Mother" STILL TURNS UP those bad results. But "Born On A Bayou" failed vs. "The Bayou"
-    # because CAN HAVE EXTRA WORDS, BUT MUST HAVE AT LEAST THE CORRECT ONES
     offset = 0 # start at 0 offset
     recordings = [] # put recordings here
     triedagain = False # have we tried another search?
@@ -223,15 +204,6 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             triedagain = True
             newrecordings = [None] # to reset list
             try: # try the search again
-                # common = lambda l: max(set(l), key=l.count) # most common element
-                # newrecording = mb.search_recordings(recording, artist=artist,
-                #         strict=False, limit=50)['recording-list'] # new search
-                # recording = print([r.get('title','') for r in newrecording]) # the recording
-                # recording = common([r.get('title','') for r in newrecording]) # the recording
-                # artist = [r.get('artist-credit',[{}])[0].get('artist',{}).get('name','') for r in newrecording] # get list of artists
-                # print(artist)
-                # artist = common([a for r,a in zip(newrecording,artist) if r.get('title','')==recording]) # the artist
-                # print(recording,artist)
                 newrecording = mb.search_recordings(recording, artist=artist,
                         strict=False, limit=50)['recording-list'][0]
                 recording, artist = newrecording['title'], newrecording['artist-credit'][0]['artist']['name']
@@ -260,11 +232,6 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             if recartist.get('id','') not in uqartistids # check if already recorded this one
             and not uqartistids.add(recartist.get('id',''))] # if not, add to set during comprehension
                 # must be and statement, because if or, python will only execute the first one
-    if options['filter']: # filter words
-        # print([uqartist.get('name','') for uqartist in uqartists])
-        uqartists = [uqartist for uqartist in uqartists if # check equality of word-lists
-                words(fixartist(uqartist.get('name','')))==words(fixartist(artist))]
-        # print([uqartist.get('name','') for uqartist in uqartists])
     if len(uqartists)==0:
         raise ValueError("No recordings found. You might have a typo in your artist name.")
     if len(uqartists)>1:
@@ -278,16 +245,16 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             df = pd.DataFrame(index=[], columns=['choice'])
         if not options['forget'] and artist in df.index.values: # load previous user response
             ids = df.loc[artist].values[0].split(',') # list of ids user chose
-            choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
-            print(f'Loaded previous response: {",".join(str(c) for c in choices)}.') # the last choices
+            userinput = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
+            print(f'Loaded previous response: {",".join(str(c) for c in userinput)}.') # the last choices
         else: # get and save user response
-            choices = None # initialize with this
-            while choices is None: # if None there was error, and loop will repeat
-                choices = input('Which artist number(s) should we use (enter 0 for all)?')
-                choices = parse(choices, len(uqartists)) # returns None on error
-            ids = ','.join(uqartists[c-1].get('id','') for c in choices)
+            userinput = None # initialize with this
+            while userinput is None: # if None there was error, and loop will repeat
+                userinput = input('Which artist number(s) should we use (enter 0 for all)?')
+                userinput = parse(userinput, len(uqartists)) # returns None on error
+            ids = ','.join(uqartists[c-1].get('id','') for c in userinput)
             df.loc[artist] = ids # add ids to dataframe
-            df.to_csv(choices)
+            df.to_csv(userinput)
         recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
             if recartistid in ids] # make sure they are in user-selected choice
     else:
@@ -297,7 +264,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     print(f'{len(recordings)} recordings with valid artist found.')
     # (Step 2) Filter out bad/unwanted recordings
     # Translate recordings, so no rejection due to capitalization/punctuation
-    if options['filter']:
+    if not options['relaxed']:
         if options['debug']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Discovered track names:',*rectitles,sep='\n')
@@ -655,7 +622,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     ############################################################################
     url = '' # by default, write nothing
-    options = ['filter', 'genreonly', 'confirm', 'forget', 'debug']
+    options = ['relaxed', 'genreonly', 'confirm', 'forget', 'debug']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:

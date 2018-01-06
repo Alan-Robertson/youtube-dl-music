@@ -72,11 +72,11 @@ The metadata script is called automatically by `youtube` but you may want to use
 This time the filename(s) must have escaped spaces. The following flag options are available:
 
 * `--url=<url>`: Add a URL to file metadata as a "Comment". The `youtube` script automatically passes this argument.
+* `--debug`: Echo some extra information during tagging process.
 * `--confirm`: Prompt user to confirm release group/release to be used for artwork.
 * `--genreonly`: Only add genre metadata, nothing else.
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
-* `--filter`: Extra filter on artist names and recording names. Probably excessive; may be removed.
-* `--debug`: Echo some extra information during tagging process.
+* `--relaxed`: Do not attempt extra filter on recording names. May be desirable in some cases, but will fail (e.g.) with differentiating Pink Floyd - Mother from Pink Floyd - Matilda Mother.
 
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
 

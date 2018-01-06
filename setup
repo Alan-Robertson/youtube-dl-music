@@ -1,4 +1,5 @@
 #!/bin/bash
+# First check the python packages are installed
 dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas)
 for dependency in ${dependencies[@]}; do
   printf "Checking for dependency $dependency... "
@@ -9,3 +10,5 @@ for dependency in ${dependencies[@]}; do
     pip install $dependency
   fi
 done
+# Next create a "config" file if it does not exist already
+[ ! -e config ] && touch config
