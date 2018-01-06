@@ -17,6 +17,8 @@ from mutagen.mp4 import MP4, MP4Cover, MP4StreamInfoError
 from mutagen.id3 import ID3, ID3NoHeaderError, TIT2, TPE1, TCON, TALB, TOAL, TDRC, TDOR, TDRL, APIC, COMM
     # PE1 is artist, CON is genre, ALB is album name, YER is year of recording,
     # ORY is original release year, IT2 is song title, APIC is artwork, and COMM is comment
+# Argument parsing
+import argparse
 # Database APIs
 import discogs_client
 import musicbrainzngs as mb
@@ -51,10 +53,12 @@ metaconfig = f"{storage}/metaconfig"
 metanoconfig = f"{storage}/metanoconfig"
 genrelist = f"{storage}/genrelist"
 # Read valid genres
+# Ignore the non-musical specifications, e.g. "Soundtrack", and a couple others
 with open(genrelist,"r") as f:
     discogs_genres = [s.strip() for s in f.readlines()] # strip removes newline chars
-genrelist = [genre for genre in genrelist # ignore certain genres
-    if genre not in ('Contemporary','Soundtrack','Score')]
+bad_genres = ('Soundtrack','Score','Special Effects','Movie Effects', # movie stuff
+    'Contemporary','Easy Listening','Early','Political') # not useful
+discogs_genres = [genre for genre in discogs_genres if genre not in bad_genres] # filter
 # Read config file
 if not os.path.exists(config):
     raise IOError("To get metadata, you must add fields to a config file called \"config\" in the project directory.")
@@ -382,6 +386,9 @@ def guess_album(recordings):
                                 group.get('country','NA') in anglo_countries), key=len)
                         # 3) Get the genres, if haven't found them yet
                         # Will prioritize Discogs genres but use MusicBrainz as backup
+                        # * Discogs genres are from the Master release, not specific to song
+                        # * MusicBrainz genres are not from Master release, but instead from
+                        #   taglist in every recording belonging to the Master release
                         if len(genres)==0:
                             added = set() # start empty set
                             dgenres = [genre for genre in genres_discogs(group['id'])
@@ -397,16 +404,16 @@ def guess_album(recordings):
                         # Set up return dictionary
                         metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
                         # Optional exits for case where only want genres
-                        if options['genreonly']:
-                            if len(genres)==0:
-                                print("No genres available.")
-                                continue
-                            else:
-                                return metadata
+                        if options['genreonly'] and len(genres)==0:
+                            continue # helpful messages were already relayed
+                        elif options['genreonly']:
+                            return metadata
                         # 4) Next the album artwork
                         # First confirm user wants to use this album for artwork
+                        checkyears = [year for year in group['years'] if year!=9999]
+                        checkyears = [-1] if len(checkyears)==0 else checkyears
                         print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
-                            f"count {group['count']}, earliest year '{min(group['years'])}', latest year '{max(y for y in group['years'] if y!=9999)}'.")
+                            f"count {group['count']}, earliest year '{min(checkyears)}', latest year '{max(checkyears)}'.")
                         if not yesno():
                             continue # only calls yesno() if noconfirm is False! neat, huh?
                         image = guess_artwork(group['releases'])
@@ -449,7 +456,7 @@ def genres_discogs(rgid):
         print('No Discogs genres found: could not find URL on MusicBrainz page.')
         return []
     if len(urls)>1:
-        print('No Discogs genres found: ambiguous number of URL candidates on MusicBrainz page.')
+        print(f"No Discogs genres found: ambiguous number of URL candidates on MusicBrainz page: {', '.join(urls)}.")
         return []
     master = os.path.basename(urls[0]) # because it is the last part after slash
     try: master = int(master)
@@ -467,13 +474,15 @@ def genres_discogs(rgid):
     if len(genres)==0:
         print("No Discogs genres found: none listed under the 'master' release.")
         return []
-    if options['debug']:
-        print(f'Discogs genres discovered:')
-        for genre in genres:
-            print(genre.title())
-    genres = [g for g in genres if g in discogs_genres] # don't want e.g. "Rock"
+    if 'Funk / Soul' in genres: # special filter
+        remove = genres.index('Funk / Soul')
+        genres = genres[:remove] + ['Funk','Soul'] + genres[remove+1:]
+            # add these individually, and preserve location in original list
+    added = set()
+    genres = [genre for genre in genres if genre in discogs_genres
+            and not (genre in added or added.add(genre))]
     if len(genres)==0:
-        print("No Discogs genres found: none left after translation.")
+        print("No Discogs genres found: labels were too vague, e.g. \"Rock\".")
         return []
     print(f"Discogs genres for writing: {', '.join(genres)}.")
     return genres
@@ -492,10 +501,13 @@ def genres_musicbrainz(recordings):
                 tags[tagd['name']] += int(tagd['count'])
     genres = sorted(list(tags.items()), key=lambda x: x[1], reverse=True) # (genre,count) tuples
     genres = [[*genre] for genre in genres] # convert to lists
-    if options['debug']:
-        print(f'MusicBrainz genres discovered:')
-        for genre,count in genres:
-            print(f"{genre.title()}: {count:d}")
+    if len(genres)==0:
+        print("No MusicBrainz genres found: taglist was empty.")
+        return []
+    # Echo message (do this every time, better)
+    igenres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
+    genres_announce = [f"{genre} ({count:d})" for genre,count in zip(igenres,counts) if count>0]
+    print(f"MusicBrainz taglist: {', '.join(genres_announce)}.")
     # Split up strings suspected to contain multiple genres
     has2, slashgenres = [], []
     for g,genre in enumerate(genres):
@@ -521,8 +533,8 @@ def genres_musicbrainz(recordings):
         name = name.replace(' and ',' & ') # discogs uses ampersand
         name = name.replace('&',' & ') # make sure separated by space
         name = name.replace('-',' ')
-        seen, words = set(), name.split() # split by spaces
-        words = [w for w in words if not (w in seen or seen.add(w))] # seen.add returns None
+        added, words = set(), name.split() # split by spaces
+        words = [w for w in words if not (w in added or added.add(w))] # added.add returns None
         if len(words)==0:
             newgenres += [['', 0]]
             continue
@@ -536,8 +548,16 @@ def genres_musicbrainz(recordings):
             words = ['rhythm','&','blues']
         if words[0]=='rock' and words[-1]=='roll': # correct e.g. rock n' roll
             words = ['rock','&','roll']
-        if 'aor' in words: # AOR == album rock
+        if 'aor' in words: # AOR == album oriented rock
             words = ['album','rock']
+        if 'powerpop' in words: # powerpop == power pop
+            words = ['power','pop']
+        if 'synthpop' in words: # powerpop == power pop
+            words = ['synth','pop']
+        if 'rnb' in words: # RnB == rhythm & blues
+            words = ['rhythm','&','blues']
+        if 'avant' in words or 'garde' in words: # avante-garde/avante garde == Avantegarde
+            words = ['avantgarde']
         if 'classic' in words and 'rock' in words: # sometimes get <something> classic rock
             words = ['classic','rock']
         if words[0]=='rock' and len(words)>1: # e.g. rock pop --> pop rock
@@ -556,15 +576,15 @@ def genres_musicbrainz(recordings):
     genres = sorted(genres, key=lambda x: x[1], reverse=True)
     # Filter the genre list by Discogs genres: compare where alphanumeric characters
     # match a Discogs style, then use the exact Discogs convention for punctuation
-    # and capitalization in the discogs_genres list
-    seen = set() # start an empty set
+    # and capitalization
+    added = set() # start an empty set
     standardize = lambda string: ' '.join(re.sub('\W',' ',string).split()).lower() # non-alphenumeric char == \W
     discogs_std = [standardize(g) for g in discogs_genres] # standard names for comparison
     genres = [(discogs_genres[discogs_std.index(standardize(genre[0]))], genre[1])
             for genre in genres if standardize(genre[0]) in discogs_std
             and genre[1]>0] # make sure at least one "count" is present
-    genres = [genre for genre in genres if not (genre[0] in seen or seen.add(genre[0]))]
-        # if genre in seen, 2nd statement is not called, but that's ok because
+    genres = [genre for genre in genres if not (genre[0] in added or added.add(genre[0]))]
+        # if genre in added, 2nd statement is not called, but that's ok because
         # we don't need to re-add it to the set
     # Now return, and echo message
     # Preserved counts until this point, so message is more informative
@@ -691,7 +711,7 @@ if __name__ == "__main__":
             raise ValueError("Found no metadata.")
         # Special options for just tagging genres
         if options['genreonly']:
-            print(f"Adding genres: '{albumprops['genres']}'")
+            print(f"Adding genres: {', '.join(albumprops['genres'])}.")
             if id3:
                 tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
                 tags.save(filepath) # supply path, in case we are creating for first time
