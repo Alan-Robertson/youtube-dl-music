@@ -17,10 +17,17 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
-You also need to create a file named `config` (no extension) in the youtubetag directory. Then add the following lines to `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
-  * The line `directory = <your music folder here>` to set the download location.
-  * **Create a Discogs account** and create a token for the API; add that to `config` with `token=<your token here>`.
-  * **Create a MusicBrainz account** and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
+Before using the `youtube` and `metadata` tools, you need to do the following:
+
+  1. Install command-line dependencies described below.
+  2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. the `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
+  3. Run the `setup` command. This does the following:
+    * Installs the python packages needed for the `metadata` script, if they are not already installed (see below for description).
+    * Creates a file named `config` in the youtubetag directory.
+  4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+    * To set the download location: `directory = <your music folder here>`.
+    * **Create a Discogs account** and create a token for the API; add that to `config` with `token = <your token here>`.
+    * **Create a MusicBrainz account** and the API simply uses your account username and password; add them to `config` with `username = <your username here>` and `password = <your password here>`.
 
 Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
 
@@ -29,8 +36,6 @@ If the `youtube` script **stops working**, it is often because `youtube.com` has
 If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata.
 
 ## Command-Line Dependencies
-  * access to a UNIX shell.
-  * python 3.6+: `metadata` script has f-strings, which is a python 3.6+ feature (f-strings are totally awesome and you should be using them (: ).
   * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media; `brew install youtube-dl` (Homebrew on Mac).
   * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `pip install ffmpeg` or `brew install ffmpeg` (Homebrew on Mac).
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`.
