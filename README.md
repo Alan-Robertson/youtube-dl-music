@@ -66,7 +66,7 @@ The metadata script is called automatically by `youtube` but you may want to use
 
 This time the filename(s) must have escaped spaces. The following flag options are available:
 
-* `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
+* `--url=<url>`: Add a URL to file metadata as a "Comment". The `youtube` script automatically passes this argument.
 * `--confirm`: Prompt user to confirm release group/release to be used for artwork.
 * `--genreonly`: Only add genre metadata, nothing else.
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
