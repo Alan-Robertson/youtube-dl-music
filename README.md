@@ -19,10 +19,10 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 <!-- Run `setup` command once. -->
 Before using the `youtube` and `metadata` tools, you need to do the following:
 
-  1. Install command-line dependencies described below.
+  1. Install command-line tools needed for `youtube` (see below).
   2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. the `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
   3. Run the `setup` command. This does the following:
-      * Installs the python packages needed for the `metadata` script, if they are not already installed (see below for description).
+      * Installs the python packages needed for `metadata` (see below).
       * Creates a file named `config` in the youtubetag directory.
   4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
       * To set the download location: `directory = <your music folder here>`.
@@ -32,8 +32,7 @@ Before using the `youtube` and `metadata` tools, you need to do the following:
 Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
 
 If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
-
-If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata.
+<!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
 
 ## Command-Line Dependencies
   * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media; `brew install youtube-dl` (Homebrew on Mac).
@@ -41,7 +40,6 @@ If you just want to download the `m4a` files and do nothing else, comment out pa
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`.
 
 ## Python Package Dependencies
-Simply run the command **pysetup** to install the necessary python packages. Here's a brief description of them, and instructions for installing them by-hand.
   * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata.
   * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database.
   * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database.
