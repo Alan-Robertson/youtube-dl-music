@@ -20,7 +20,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 Before using the `youtube` and `metadata` tools, you need to do the following:
 
   1. Install command-line tools needed for `youtube` (see below).
-  2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. the `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
+  2. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. The `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
   3. Run the `setup` command. This does the following:
       * Installs the python packages needed for `metadata` (see below).
       * Creates a file named `config` in the youtubetag directory.
