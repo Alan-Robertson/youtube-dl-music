@@ -7,7 +7,7 @@ This script uses `youtube-dl` to download and save audio from youtube into `aac`
 ## Installation and Setup
 This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
 
-    git clone http://github.com/lukelbd/youtubetag
+    git clone https://github.com/lukelbd/youtubetag
 
 This should create a directory named `youtubetag`. You then need to make sure the `youtube` and `metadata` executables are in your `$PATH` variable. This is up to you; the simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
 
