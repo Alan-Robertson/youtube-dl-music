@@ -4,7 +4,7 @@
 <!-- [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](lukelbd@gmail.com) -->
 This script uses `youtube-dl` to download and save audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script I created called `metadata`.
 
-## Installation and Setup
+## Installation
 This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
 
     git clone https://github.com/lukelbd/youtubetag
@@ -17,6 +17,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
+## Setup
 To use **`youtube`** you simply need to install the command-line dependencies listed below. That's it.
 
 To use **`metadata`** a few more steps are required (if you just want to download music without tagging it, comment out the final line in `youtube`):
