@@ -65,12 +65,13 @@ The metadata script is called automatically by `youtube` but you may want to use
     metadata <flags> <filename(s)>
 
 This time the filename(s) must have escaped spaces. The following flag options are available:
-* `--debug`: Echo some extra information during downloading process.
+
 * `--url=<url>`: Add some URL metadata. The `youtube` script automatically passes this.
 * `--noconfirm`: Do not prompt user to confirm the release group. The `youtube` script uses this flag but the thinking is, if a user calls metadata manually, they may want more control.
-* `--nofilter`: Do not filter recordings by name.
-* `--noconfig`: Do not read previous user responses to ambiguous artist names from the config file.
 * `--genreonly`: Only add genre metadata, nothing else. Because this functionatlity can be grealy improved, this flag was added as a way to quickly test things.
+* `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
+* `--filter`: Do not filter recordings by name.
+* `--debug`: Echo some extra information during downloading process.
 
 This tagging script is certainly not the fastest out there. For example the builtin PowerAmp Android app cover art-downloader is pretty darn fast.
 

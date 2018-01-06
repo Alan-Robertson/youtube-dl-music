@@ -1,9 +1,7 @@
 # Sensitive content #
 #####################
 config
-metaconfig
-metanoconfig
-metalist
+choices
 .old
 setup
 

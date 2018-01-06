@@ -49,8 +49,7 @@ import unidecode as ud # converting accents to normal characters
 # File names
 storage = os.path.dirname(os.path.realpath(__file__))
 config = f"{storage}/config"
-metaconfig = f"{storage}/metaconfig"
-metanoconfig = f"{storage}/metanoconfig"
+choices = f"{storage}/choices"
 genrelist = f"{storage}/genrelist"
 # Read valid genres
 # Ignore the non-musical specifications, e.g. "Soundtrack", and a couple others
@@ -274,10 +273,10 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         for i,uqartist in enumerate(uqartists): # simple message
             print(f"{i+1:d}: {uqartist.get('name','')} "\
                     f"({uqartist.get('disambiguation','')})".split('()')[0])
-        try: df = pd.read_csv(metaconfig, index_col=0, header=0, dtype=str)
+        try: df = pd.read_csv(choices, index_col=0, header=0, dtype=str)
         except FileNotFoundError:
             df = pd.DataFrame(index=[], columns=['choice'])
-        if not options['noconfig'] and artist in df.index.values: # load previous user response
+        if not options['forget'] and artist in df.index.values: # load previous user response
             ids = df.loc[artist].values[0].split(',') # list of ids user chose
             choices = [c+1 for c,uqartist in enumerate(uqartists) if uqartist.get('id','') in ids]
             print(f'Loaded previous response: {",".join(str(c) for c in choices)}.') # the last choices
@@ -288,7 +287,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
                 choices = parse(choices, len(uqartists)) # returns None on error
             ids = ','.join(uqartists[c-1].get('id','') for c in choices)
             df.loc[artist] = ids # add ids to dataframe
-            df.to_csv(metaconfig)
+            df.to_csv(choices)
         recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
             if recartistid in ids] # make sure they are in user-selected choice
     else:
@@ -507,7 +506,8 @@ def genres_musicbrainz(recordings):
     # Echo message (do this every time, better)
     igenres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
     genres_announce = [f"{genre} ({count:d})" for genre,count in zip(igenres,counts) if count>0]
-    print(f"MusicBrainz taglist: {', '.join(genres_announce)}.")
+    if options['debug']:
+        print(f"MusicBrainz taglist: {', '.join(genres_announce)}.")
     # Split up strings suspected to contain multiple genres
     has2, slashgenres = [], []
     for g,genre in enumerate(genres):
@@ -653,11 +653,9 @@ def guess_artwork(releases):
 if __name__ == "__main__":
     ############################################################################
     # Parse all command-line arguments
-    # Decided to make no-filtering by "words" the default, causes more trouble
-    # than necessary! As long as we have the artist search we are fine.
     ############################################################################
     url = '' # by default, write nothing
-    options = ['filter', 'genreonly', 'debug', 'noconfirm', 'noconfig']
+    options = ['filter', 'genreonly', 'noconfirm', 'forget', 'debug']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:
@@ -667,9 +665,10 @@ if __name__ == "__main__":
                 if len(url)==1:
                     raise ValueError("Invalid url argument.")
                 url = ''.join(url[1:]) # re-combine after the first = sign
-            elif arg[2:] not in options: # searches keys by default
+            elif arg[2:] in options: # a True/False flag
+                options[arg[2:]] = True
+            else:
                 raise ValueError("Invalid '--' argument.")
-            options[arg[2:]] = True # option enabled
         else:
             filepaths.append(arg)
     # filepath = ' '.join(filepath) # so don't have to escape spaces
