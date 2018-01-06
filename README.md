@@ -17,7 +17,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
-You also need to create a file named `config` (no extension) in the same directory as the `metadata` and `youtube` scripts. Just add the following lines to `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+You also need to create a file named `config` (no extension) in the youtubetag directory. Then add the following lines to `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
   * The line `directory = <your music folder here>` to set the download location.
   * **Create a Discogs account** and create a token for the API; add that to `config` with `token=<your token here>`.
   * **Create a MusicBrainz account** and you can simply use your account username and password; add them to `config` with `username=<your username here>` and `password=<your password here>`.
