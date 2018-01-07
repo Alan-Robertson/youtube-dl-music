@@ -333,6 +333,7 @@ def guess_album(recordings):
     # members, and by its type (album vs. single, etc.)
     genres = [] # start empty
     title = None # initialize
+    image = None # initialize
     metadata = None # initialize
     type_prefs_grouped = (['Album','Single'],['EP'],['Compilation','Other','Soundtrack','NA'],['Live']) #,('Live',)):
     for itype,type_prefs in enumerate(type_prefs_grouped):
