@@ -264,7 +264,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     print(f'{len(recordings)} recordings with valid artist found.')
     # (Step 2) Filter out bad/unwanted recordings
     # Translate recordings, so no rejection due to capitalization/punctuation
-    if not options['relaxed']:
+    if options['strict']:
         if options['debug']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Discovered track names:',*rectitles,sep='\n')
@@ -623,7 +623,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     ############################################################################
     url = '' # by default, write nothing
-    options = ['relaxed', 'genreonly', 'confirm', 'forget', 'debug']
+    options = ['strict', 'genreonly', 'confirm', 'forget', 'debug']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:

@@ -76,7 +76,7 @@ This time the filename(s) must have escaped spaces. The following flag options a
 * `--confirm`: Prompt user to confirm release group/release to be used for artwork.
 * `--genreonly`: Only add genre metadata, nothing else.
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
-* `--relaxed`: Do not attempt extra filter on recording names. May be desirable in some cases, but will fail (e.g.) with differentiating Pink Floyd - Mother from Pink Floyd - Matilda Mother.
+* `--strict`: Apply filter on recording names, to make sure the words match. In some cases algorithm fails with this option (e.g. search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses), but in other cases it may be necessary (e.g. without `strict`, "Pink Floyd - Matilda Mother" is included from input "Pink Floyd - Mother").
 
 This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
 <!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->
