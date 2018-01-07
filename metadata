@@ -347,7 +347,7 @@ def guess_album(recordings):
                     for group in groupsC:
                         # 2) Get the title; choose as the title of a release in the PREFERRED
                         # group for getting artwork; not the first one that actually has artwork
-                        if title is None:
+                        if title is None or image is None:
                             title = min((title for title in group['titles'] if
                                 group.get('country','NA') in anglo_countries), key=len)
                         # 3) Get the genres, if haven't found them yet
@@ -679,11 +679,14 @@ if __name__ == "__main__":
         if options['genreonly']:
             print(f"Adding genres: {', '.join(albumprops['genres'])}.")
             if id3:
+                # Not sure how to replicate the below for ID3
                 tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
                 tags.save(filepath) # supply path, in case we are creating for first time
             if not id3:
-                tags["\xa9gen"] = [*albumprops['genres']]
-                tags.save()
+                # Only do this if genres have changed
+                if tags["\xa9gen"] != [*albumprops['genres']]:
+                    tags["\xa9gen"] = [*albumprops['genres']]
+                    tags.save()
             sys.exit()
         # Addd MP4-format metadata
         print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
