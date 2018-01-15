@@ -18,7 +18,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
 ## Setup
-To use **`youtube`** you simply need to install the command-line dependencies listed below. That's it.
+To use **`youtube`** you need to install the command-line dependencies listed below, along with `ffmpeg`, and create a file named `config` containing the line `directory = <music location here>`. That's it.
 
 To use **`metadata`** a few more steps are required (if you just want to download music without tagging it, comment out the final line in `youtube`):
 
@@ -36,12 +36,13 @@ To use **`metadata`** a few more steps are required (if you just want to downloa
 If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
 <!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
 
-## Command-Line Dependencies
+## Command-Line Dependency
   * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media; `brew install youtube-dl` (Homebrew on Mac).
-  * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `pip install ffmpeg` or `brew install ffmpeg` (Homebrew on Mac).
-  * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell; `pip install ffmpeg-normalize`.
+  * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `brew install ffmpeg` (Homebrew on Mac).
 
 ## Python Package Dependencies
+  * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell.
+  <!-- ; `pip install ffmpeg-normalize`. -->
   * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata.
   * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database.
   * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database.
