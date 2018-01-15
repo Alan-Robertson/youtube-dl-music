@@ -18,7 +18,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
 ## Setup
-To use **`youtube`** you need to install the command-line dependencies listed below, along with `ffmpeg`, and create a file named `config` containing the line `directory = <music location here>`. That's it.
+To use **`youtube`** you need to install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, then in the  `youtube` script comment out the first few lines and assign your desired download path to the `directory` variable.
 
 To use **`metadata`** a few more steps are required (if you just want to download music without tagging it, comment out the final line in `youtube`):
 
@@ -33,14 +33,14 @@ To use **`metadata`** a few more steps are required (if you just want to downloa
       * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
       * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
 
-If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` ("update") and it should start working again.
+If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` or `pip install --upgrade youtube-dl` (depending on the installation method) and it should start working again.
 <!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
 
-## Command-Line Dependency
-  * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media; `brew install youtube-dl` (Homebrew on Mac).
+## Non-Python Dependency
   * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `brew install ffmpeg` (Homebrew on Mac).
 
 ## Python Package Dependencies
+  * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media.
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell.
   <!-- ; `pip install ffmpeg-normalize`. -->
   * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata.

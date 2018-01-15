@@ -1,6 +1,6 @@
 #!/bin/bash
 # First check the python packages are installed
-dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffmpeg-normalize)
+dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffmpeg-normalize youtube-dl)
 for dependency in ${dependencies[@]}; do
   printf "Checking for dependency $dependency... "
   if python3 -c "import $dependency" 2>/dev/null; then
