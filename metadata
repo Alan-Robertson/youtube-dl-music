@@ -138,18 +138,21 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         # Elminates all non-alphanumeric characters and parentheticals.
         # Allows for some limited exceptions
         iwords = []
+        ignorewords = ['part', 'the', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix']
         for istring in string.split('/'):
             istring = ud.unidecode(string) # get plain ASCII letters from accents
             istring = re.sub("\.","",istring) # e.g. S.O.S. goes to SOS
                 # make sure to escape the '.'! that was a really dumb bug!
             istring = re.sub("&"," and ",istring) # standardize and symbols
             istring = re.sub(r"\(.*\)","",istring) # delete stuff in parentheses
+            # istring = re.sub(r"\((.*)\)",r"\1",istring) # remove parentheses
             istring = re.sub(r"“.*”","",istring) # delete stuff in quotes
+            # istring = re.sub(r"“(.*)”",r"\1",istring) # remove quotes
             istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
-            istring = istring.split(" and ")[0] # e.g. Joan Jett "and the Blackhearts"
-            istring = istring.split(" ft ")[0] # e.g. Queen ft. David Bowie
+            # istring = istring.split(" and ")[0] # e.g. Joan Jett "and the Blackhearts"
+            # istring = istring.split(" ft ")[0] # e.g. Queen ft. David Bowie
             iwords += [[w for w in istring.lower().split()
-                if w!='the' and len(w)>1]] # just add the words; the accounts for e.g. The Stooges
+                if w not in ignorewords and len(w)>1]] # just add the words; the accounts for e.g. The Stooges
             # iwords += [[w for w in istring.lower().split()
             #     if w!='the' and len(w)>1]] # ignore single letters
         return iwords
@@ -254,7 +257,7 @@ def guess_recordings(artist, recording): #artistnames, artistids):
                 userinput = parse(userinput, len(uqartists)) # returns None on error
             ids = ','.join(uqartists[c-1].get('id','') for c in userinput)
             df.loc[artist] = ids # add ids to dataframe
-            df.to_csv(userinput)
+            df.to_csv()
         recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
             if recartistid in ids] # make sure they are in user-selected choice
     else:
