@@ -4,9 +4,9 @@ dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffm
 for dependency in ${dependencies[@]}; do
   printf "Checking for dependency $dependency... "
   if python3 -c "import $dependency" 2>/dev/null; then
-    echo "package already installed."
+    echo "\"$dependency\" already installed."
   else
-    echo "installing $dependency..."
+    echo "Installing \"$dependency\"..."
     pip install $dependency
   fi
 done

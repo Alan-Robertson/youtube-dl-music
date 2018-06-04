@@ -46,7 +46,7 @@ If the `youtube` script **stops working**, it is often because `youtube.com` has
   * [mutagen](https://github.com/quodlibet/mutagen): for writing metadata.
   * [musicbrainzngs](https://github.com/alastair/python-musicbrainzngs): for interacting with MusicBrainz database.
   * [discogs_client](https://github.com/discogs/discogs_client): for interacting with Discogs database.
-  * [BeautifulSoup](https://pypi.python.org/pypi/beautifulsoup4): for parsing the "release group" HTML webpage and finding any linked discogs "master releases". Necessary because there is no way of retreiving this link from the MusicBrainz API directly.
+  * [BeautifulSoup](https://pypi.python.org/pypi/beautifulsoup4): for parsing the "release group" HTML webpage and finding any linked discogs "master releases". Necessary because there is no way of retrieving this link from the MusicBrainz API directly.
   * [pandas](https://github.com/pandas-dev/pandas): for inputting/outputting tabulated data.
   * [Python Imaging Library](https://pypi.python.org/pypi/PIL): for warping cover art images to square.
   * [unidecode](https://pypi.python.org/pypi/Unidecode): for translating accented characters to ASCII, so you don't have to get accents perfectly correct in your filename.

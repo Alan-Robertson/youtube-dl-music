@@ -1,38 +1,38 @@
 #!/bin/bash
+# #!/usr/bin/env bash # bash 4.0 is better but less available
 # This function is a simple wrapper around some useful open-source command-line
 # tools to download and normalize youtube audio into the AAC (extension .m4a) format;
 # we choose this format because it matches the compression of .mp3 but has much improved
 # audio quality at similar bitrate. Also runs the file through a python metadata-tagging script.
 
 # Download directory; default is where I keep my music
+# Note 'cut' will automatically trim leading/trailing whitespace it seems
 directory="$(cat $(dirname $(realpath $0))/config | grep "directory" | cut -s -d '=' -f 2 | xargs)"
-  # cut will automatically trim leading/trailing whitespace it seems
 directory="${directory/"~"/$HOME}" # don't expand spaces, but expand ~
 directory="${directory%/}" # trim trailing slash if present
-if [ ! -d "$directory" ]; then
-  echo "ERROR: Directory \"$directory\" does not exist,"\
-    "or the directory was not declared/incorrectly declared in the config file."
-  exit 1
-fi
+rejects="$(cat $(dirname $(realpath $0))/config | grep "rejects" | cut -s -d '=' -f 2 | xargs)"
+rejects="${rejects/"~"/$HOME}"
+rejects="${rejects%/}"
+[[ ! -d "$directory" ]] && echo "ERROR: Directory \"$directory\" does not exist,"\
+  "or the directory was not declared/incorrectly declared in the config file." && exit 1
 
 # Parsing of filename and input
 name="${@:2}" # select all args (@) from 2 to end
 url="$1" # the original URL
-if [ -z "$url" ]; then
-  echo "ERROR: Must supply URL."
-  exit 1
-fi
-if [ -z "$name" ]; then
-  echo "ERROR: Must supply output filename."
-  exit 1
+[ -z "$url" ] && echo "Error: Must supply URL." && exit 1
+[ -z "$name" ] && echo "Error: Must supply output filename." && exit 1
+
+# Optionally confirm
+rpath="$rejects/$name.m4a" # the rejects path
+if [ ! -z "$rejects" ] && [ -f "$rpath" ]; then
+  read -r -p "Warning: File is present in \"rejects\" folder. Are you sure you want to download it? [Y/n]" response
+  [ ! -z "$response" ] && [[ "$response" =~ ^[Nn]$ ]] && exit # check lower-case response
 fi
 
 # Download, using youtube-dl
-path="$directory/$name.m4a" # the filename
-if [ -f "$path" ]; then # must remove any old download, or get errors with youtube-dl
-  echo "Removing old file..."
-  rm "$path"
-fi
+path="$directory/$name.m4a" # the destination
+[ -f "$path" ] && echo "Warning: Removing old file..." && rm "$path"
+  # must remove any old download, or get errors with youtube-dl
 echo "Downloading $url into filename: $name"
 youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg "$url" -o "$path" # no playlist, in case user provides playlist URL
 # youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path"
