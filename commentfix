@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""
+Script to fix "comment" metadata on m4a files; if they are
+not a youtube URL, we delete them. This repairs issue with metadata
+script before that added useless string to comments.
+"""
 import sys
 import time
 from mutagen.mp4 import MP4

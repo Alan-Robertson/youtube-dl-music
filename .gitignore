@@ -1,9 +1,13 @@
 # Sensitive content #
 #####################
+ctags
+  # exuberant ctags files
 config
+  # other stuff
+learning
+  # practice
 choices
-.old
-setlinks
+  # user-specific
 
 # LATEX STUFF #
 ###############

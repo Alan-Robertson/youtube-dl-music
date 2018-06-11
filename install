@@ -1,0 +1,14 @@
+#!/bin/bash
+# First check the python packages are installed
+dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffmpeg-normalize youtube-dl)
+for dependency in ${dependencies[@]}; do
+  printf "Checking for dependency $dependency... "
+  if python3 -c "import $dependency" 2>/dev/null; then
+    echo "\"$dependency\" already installed."
+  else
+    echo "Installing \"$dependency\"..."
+    pip install $dependency
+  fi
+done
+# Next create a "config" file if it does not exist already
+[ ! -e config ] && touch config

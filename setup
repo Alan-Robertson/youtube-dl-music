@@ -1,14 +1,14 @@
 #!/bin/bash
-# First check the python packages are installed
-dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffmpeg-normalize youtube-dl)
-for dependency in ${dependencies[@]}; do
-  printf "Checking for dependency $dependency... "
-  if python3 -c "import $dependency" 2>/dev/null; then
-    echo "\"$dependency\" already installed."
-  else
-    echo "Installing \"$dependency\"..."
-    pip install $dependency
-  fi
+# Places symlinks to these functions inside home directory
+# Only remove existing files if they are symlinks; don't overwrite real data
+# Symlinks will be *relative* to home directory
+for exe in metadata youtube commentfix; do
+  echo "Creating symlink for \"$exe\"..."
+  [ -L ~/$exe ] && rm ~/$exe
+  ln -s youtubetag/$exe ~/$exe
 done
-# Next create a "config" file if it does not exist already
-[ ! -e config ] && touch config
+# if hash realpath 2>/dev/null; then # on my macOS is available
+#   ln -s $(realpath ./$exe) ~/$exe
+# else # on all Linux distros is available; mac has it but no -f option
+#   ln -s $(readlink -f ./$exe) ~/$exe
+# fi
