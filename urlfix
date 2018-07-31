@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+"""
+Fix sucky issue.
+This issue was caused by a stupid regex fuckup in the commentfix script
+But actually, can also be used to test if urls are unavailable with a couple
+minor modifications; so may have some real use
+"""
+import sys
+import time
+import string
+import subprocess
+from mutagen.mp4 import MP4
+for file in sys.argv[1:]:
+    print(f"File: \"{file}\".")
+    tags = MP4(file)
+    value = tags["\xa9cmt"]
+    if not value or not value[0]:
+        print("No url available.")
+        continue
+    url = value[0]
+    if '&' in url:
+        url = url.split('&')[0]
+        url_suffix = '&'.join(url.split('&')[1:])
+    else:
+        url_suffix = ''
+    if 'youtu.be' in url:
+        print('Fixing youtu.be url.')
+        url = 'https://www.youtube.com/watch?v=' + url.split('/')[-1] # last place is id
+    if len(url.split('='))!=2:
+        raise ValueError(f"Too many equals signs: {url}.")
+    url_id = url.split('=')[-1]
+    if len(url_id)==11:
+        print("Url valid.")
+    elif len(url_id)==10:
+        # See: https://stackoverflow.com/a/3472777/4970632
+        # Only Popen can redirect into string
+        # The requests library didn't return a 404, what the fuck
+        # Use good old curl instead, fuck you python
+        success = False
+        print("Url invalid.") # save it! please!
+        for a in '_-' + string.digits + string.ascii_lowercase + string.ascii_uppercase:
+            url_test = url.split('=')[0] + '=' + a + url_id
+            s, e = subprocess.Popen(['curl', '-s', '--head', url_test],
+                stdout=subprocess.PIPE).communicate()
+            if '404' in s.decode().split('\n')[0]:
+                print(f'Tried {a}.')
+            else:
+                success = True
+                print(f'{a} was successful!')
+                tags["\xa9cmt"] = [url_test + url_suffix]
+                tags.save()
+                break # out of ascii loop
+        if not success:
+            print(f"Warning: Failed to find correct url for {file}.")
+            # raise ValueError("Failed to find url.")
+    else:
+        raise ValueError(f"Url is weird: {url}, id length {len(url_id)}.")
+

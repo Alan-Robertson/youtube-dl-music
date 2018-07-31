@@ -3,17 +3,33 @@
 Script to fix "comment" metadata on m4a files; if they are
 not a youtube URL, we delete them. This repairs issue with metadata
 script before that added useless string to comments.
+Script also fixes issue where youtube urls were recorded as
+?vID instead of ?v=ID.
 """
+import re
 import sys
 import time
 from mutagen.mp4 import MP4
+bad, good = 0, 0
+regex = r'\?v([^=])' # ?v identifier malformed
 for file in sys.argv[1:]:
     print(f"File: \"{file}\".")
     tags = MP4(file)
     value = tags["\xa9cmt"]
-    # print(value)
-    if value and value[0] and 'http' not in value[0]: # if list is non-empty, if
-        # string is non-empty, and if http not in string
-        print("Fixing comment metadata.")
+    if not value or not value[0]:
+        bad += 1
+        print('Url not available.')
+        continue
+    if 'http' not in value[0]:
+        bad += 1
+        print("Fixing comment metadata."); time.sleep(0.5)
         tags["\xa9cmt"] = [""] # empty comment
         tags.save() # don't need to re-supply with path
+        continue
+    good += 1
+    if re.search(regex, value[0]):
+        print("Fixing malformed URL."); time.sleep(0.5)
+        tags["\xa9cmt"] = [re.sub(regex, r'?v=\1', value[0])]
+        tags.save()
+print('Without urls: ', bad)
+print('With urls: ', good)

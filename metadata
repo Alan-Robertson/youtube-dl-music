@@ -324,7 +324,7 @@ def guess_album(recordings):
     # This information will be used to sort albums by a hieararchy of preferred characteristics
     for group in groups:
         group['count'] = len(group['releases'])
-        group['years'] = [int(release.get('date','9999')[:4]) for release in group['releases']]
+        group['years'] = [int(release.get('date','9999')[:4]) for release in group['releases'] if release.get('date','9999')] # if non-empty
         group['years'] = [*{year for year in group['years'] if 1900<year<2100}]
         group['years'] = [9999] if len(group['years'])==0 else group['years']
         group['titles'] = [*{release.get('title','') for release in group['releases']}]
@@ -576,7 +576,7 @@ def guess_artwork(releases):
     japenese text on them, but seems that European release are usually good and sometimes
     are the only available digital copies. Maybe just ignore asian countries?"""
     # First, go by release medium
-    years = [int(release.get('date','0001')[:4]) for release in releases]
+    years = [int(release.get('date','0001')[:4]) for release in releases if release.get('date','0001')]
     filter_known = [False for release in releases] # want to catch any unknown media
     for m,medium in enumerate(media_pref):
         if medium=='other': # we are at the end; see if any media were left
@@ -635,7 +635,7 @@ if __name__ == "__main__":
                 url = arg[2:].split('=')
                 if len(url)==1:
                     raise ValueError("Invalid url argument.")
-                url = ''.join(url[1:]) # re-combine after the first = sign
+                url = '='.join(url[1:]) # re-combine after the first = sign
             elif arg[2:] in options: # a True/False flag
                 options[arg[2:]] = True
             else:

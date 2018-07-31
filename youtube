@@ -1,9 +1,59 @@
-#!/bin/bash
-# #!/usr/bin/env bash # bash 4.0 is better but less available
+#!/usr/bin/env bash
+#------------------------------------------------------------------------------#
 # This function is a simple wrapper around some useful open-source command-line
-# tools to download and normalize youtube audio into the AAC (extension .m4a) format;
-# we choose this format because it matches the compression of .mp3 but has much improved
-# audio quality at similar bitrate. Also runs the file through a python metadata-tagging script.
+# tools to download, normalize, and tag youtube audio. 3 steps:
+# 1) Download audio into native format with highest bitrate -- usually an OOG (webm) file.
+# 2) Normalize the volume of that audio and re-compress into AAC (m4a) file -- do this
+#    because m4a matches compression of mp3 but with much improved audio quality at marginal bitrates.
+# 3) Tag the audio based on only two sources of information, specified by the user --
+#    an "artist" and a "title". The tagging script does various fuzzy searching things
+#    to get year of release, album name, album artwork, and genres.
+#------------------------------------------------------------------------------#
+# Parse input, including optional flags
+name=
+mp3=false   # mp3 or m4a by default?
+debug=false # debug mode
+nopp=false  # no post-processing
+lead=
+trail=
+flags_norm="-v -t -23" # normalize to default of -23
+flags_metadata="" # none by default
+$mp3 && ext_new="mp3" || ext_new="m4a"
+while [ $# -gt 0 ]; do
+  case $1 in
+    -c|--cut-leading)  lead=$2;  shift; ;; # cut leading time, seconds
+    -C|--cut-trailing) trail=$2; shift; ;; # cut trailing time, seconds
+    -3|--mp3)       mp3=true;        ;; # m4a is better format so generally want to avoid this
+    -4|--m4a|--aac) mp3=false;       ;;
+    -d|--debug)     debug=true;      ;; # keep all the intermediate files along the way
+    -n|--no-post-process) nopp=true; ;;
+    --strict|--genreonly|--confirm|--forget|--debug) flags_metadata+="$1 "; ;;
+    -[-a-zA-Z0-9]*) echo "Error: Unknown flag \"$1\"." && exit 1; ;;
+    http*) url="$1"; ;;    # youtube url
+    *)     name+=" $1"; ;; # so user can specify filename without spaces
+  esac
+  shift
+done
+
+# 'Extra' arguments for trimming time; can be passed to ffmpeg-normalize
+# See this link for trimming: https://superuser.com/questions/258032/is-it-possible-to-use-ffmpeg-to-trim-off-x-seconds-from-the-beginning-of-a-video
+extra="-e=" # open
+if [ ! -z $lead ]; then
+  echo "Trimming first $lead seconds."
+  extra+="-ss $lead "
+fi
+if [ ! -z $trail ]; then
+  echo "Trimming last $trail seconds."
+  extra+="-sseof $trail "
+fi
+
+# Trim trialing spaces for filenames
+name="${name# }"
+name="${name% }"
+echo URL: $url
+echo Name: $name
+[ -z "$url" ] && echo "Error: Must supply URL." && exit 1
+[ -z "$name" ] && echo "Error: Must supply output filename." && exit 1
 
 # Download directory; default is where I keep my music
 # Note 'cut' will automatically trim leading/trailing whitespace it seems
@@ -13,41 +63,79 @@ directory="${directory%/}" # trim trailing slash if present
 rejects="$(cat $(dirname $(realpath $0))/config | grep "rejects" | cut -s -d '=' -f 2 | xargs)"
 rejects="${rejects/"~"/$HOME}"
 rejects="${rejects%/}"
-[[ ! -d "$directory" ]] && echo "ERROR: Directory \"$directory\" does not exist,"\
+[[ ! -d "$directory" ]] && echo "Error: Directory \"$directory\" does not exist,"\
   "or the directory was not declared/incorrectly declared in the config file." && exit 1
 
-# Parsing of filename and input
-name="${@:2}" # select all args (@) from 2 to end
-url="$1" # the original URL
-[ -z "$url" ] && echo "Error: Must supply URL." && exit 1
-[ -z "$name" ] && echo "Error: Must supply output filename." && exit 1
-
 # Optionally confirm
-rpath="$rejects/$name.m4a" # the rejects path
-if [ ! -z "$rejects" ] && [ -f "$rpath" ]; then
-  read -r -p "Warning: File is present in \"rejects\" folder. Are you sure you want to download it? [Y/n]" response
-  [ ! -z "$response" ] && [[ "$response" =~ ^[Nn]$ ]] && exit # check lower-case response
+if [ ! -z "$rejects" ] && compgen -G "$rejects/$name.*" &>/dev/null; then
+  while true; do
+    read -r -p "Warning: File is present in \"rejects\" folder. Are you sure you want to download it? ([y]/n) " response
+    [ ! -z "$response" ] && [[ ! "$response" =~  ^[NnYy]$ ]] && continue # invalid
+    [[ "$response" =~ ^[Nn]$ ]] && exit # answer is either yes, no, or blank (i.e. yes)
+    break
+  done
 fi
 
+# A few basic settings
+path_template="$directory/$name-download.%(ext)s" # see youtube-dl help info; just picks whatever extension
+path_normalized="$directory/$name-normalized.$ext_new"
+path_intermediate="$directory/$name-normalized.wav" # sometimes unused
+path_new="$directory/$name.$ext_new"
+flags="-f bestaudio --no-playlist"
+
+#------------------------------------------------------------------------------#
 # Download, using youtube-dl
-path="$directory/$name.m4a" # the destination
-[ -f "$path" ] && echo "Warning: Removing old file..." && rm "$path"
-  # must remove any old download, or get errors with youtube-dl
-echo "Downloading $url into filename: $name"
-youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg "$url" -o "$path" # no playlist, in case user provides playlist URL
-# youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path"
-# youtube-dl -f bestaudio[ext=m4a] -t "$name" --metadata-from-title "%(artist)s - %(title)s" --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path"
+echo "Determining filename." && sleep 0.5
+echo $path_template
+path_old="$(youtube-dl --get-filename $flags "$url" -o "$path_template")" # no playlist, in case user provides playlist URL
+[ -z "$path_old" ] && echo "Error: Could not get name." && exit 1
+ext_old="${path_old##*.}"
+echo "Downloading." && sleep 0.5
+youtube-dl $flags "$url" -o "$path_template" # no playlist, in case user provides playlist URL
+[ $? -ne 0 ] && echo "Error: Download failed." && exit 1
+# youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
+# youtube-dl -f bestaudio[ext=m4a] -t "$name" --metadata-from-title "%(artist)s - %(title)s" --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
+$debug && cp "$path_old" "$directory/$name-raw.$ext_old" # original file, not normalized
+$nopp && echo "Skipping post processing." && exit
 
+#------------------------------------------------------------------------------#
 # Normalize audio and re-compress into AAC
-echo "Normalizing volume to -26dB."
-ffmpeg-normalize -uf -a aac "$path"
-  # -a specifies audiocodec; see help info, this is wav file (ideal sense we don't want to recompress the raw data)
-mv "$directory/normalized-$name.m4a" "$path"
-# Normalize output and get raw WAV data (unfortunately WAV is impossible to tag :( )
-# ffmpeg-normalize "$directory/$name.m4a"
-# mv "$directory/normalized-$name.wav" "$directory/$name.wav"
-# rm "$path"
+# * The units are Loudness Units Relative to Full Scale.
+#   Refers to the target average loudness units for track; this
+#   will prevent clipping of sounds up to 26dB above this average.
+#   See: https://www.pro-tools-expert.com/home-page/2016/9/6/video-mastering-using-lufs
+# * Might consider using iTunes default bitrate of 256kbs
+#   See: https://lifehacker.com/5810575/does-bitrate-really-make-a-difference-in-my-music
+#   But it seems otherwise, will be recompressed into roughly the original bitrate; probably
+#   doesn't make sense to decompress a compressed format, then save it in a higher resolution.
+if $mp3; then # tried with and without intermediary, still fails
+  echo "Normalizing volume, outputing to mp3." && sleep 0.5
+  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libmp3lame -o "$path_normalized"
+  # echo "Generating intermediate file." && sleep 0.5
+  # ffmpeg-normalize "$path_old" -v -f -o "$path_intermediate"
+  # echo "Normalizing volume, outputing to mp3." && sleep 0.5
+  # ffmpeg -y -i "$path_intermediate" -c:a libmp3lame "$path_normalized"
+  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
+  # ! $debug && rm "$path_intermediate"
+else # builtin aac thing sucks; make sure to brew install ffmpeg with option --with-fdk-aac
+  echo "Normalizing volume, outputing to m4a." && sleep 0.5
+  # ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libfdk_aac -o "$path_normalized"
+  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libfdk_aac -o "$path_normalized"
+  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
+fi
+# Repeat for debugging
+# Move files around, and potentially delete outdated files
+if $debug; then
+  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
+  cp "$path_normalized" "$path_new"
+else
+  rm "$path_old"
+  mv "$path_normalized" "$path_new"
+fi
 
+#------------------------------------------------------------------------------#
 # Change metadata using python function
-# Do this quickly, so don't ask for user confirmation
-metadata --url="$url" "$path"
+echo "Adding metadata." && sleep 0.5
+metadata $flags_metadata --url="$url" "$path_new"
+[ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1
+$debug && cp "$path_new" "${path_new%.*}-metadata.${ext_new}"

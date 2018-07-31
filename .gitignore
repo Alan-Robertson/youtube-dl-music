@@ -18,9 +18,14 @@ choices
 
 # VIM extras #
 ##############
-**/*Icon[]
-**/*.session.vim
-**/.*.sw[a-z]
+*Icon[]
+*.session.vim
+*.vimsession
+.*.sw[a-z]
+
+# Other #
+#########
+test*
 
 # Old stuff #
 #############
