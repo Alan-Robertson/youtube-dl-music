@@ -10,23 +10,23 @@
 #    to get year of release, album name, album artwork, and genres.
 #------------------------------------------------------------------------------#
 # Parse input, including optional flags
-name=
+quick=0     # 1 means skip metadata, 2 means skip normalization
 mp3=false   # mp3 or m4a by default?
 debug=false # debug mode
-nopp=false  # no post-processing
-lead=
-trail=
+metadata=true   # by default, retrieve metadata and noarmalize
+classical=false # different folder for classical music
 flags_norm="-v -t -23" # normalize to default of -23
-flags_metadata="" # none by default
 $mp3 && ext_new="mp3" || ext_new="m4a"
 while [ $# -gt 0 ]; do
   case $1 in
+    -q|--quick)      quick=1 ;;
+    -Q|--very-quick) quick=2 ;;
+    -cl|--classical)   classical=true; ;;
     -c|--cut-leading)  lead=$2;  shift; ;; # cut leading time, seconds
     -C|--cut-trailing) trail=$2; shift; ;; # cut trailing time, seconds
     -3|--mp3)       mp3=true;        ;; # m4a is better format so generally want to avoid this
     -4|--m4a|--aac) mp3=false;       ;;
     -d|--debug)     debug=true;      ;; # keep all the intermediate files along the way
-    -n|--no-post-process) nopp=true; ;;
     --strict|--genreonly|--confirm|--forget|--debug) flags_metadata+="$1 "; ;;
     -[-a-zA-Z0-9]*) echo "Error: Unknown flag \"$1\"." && exit 1; ;;
     http*) url="$1"; ;;    # youtube url
@@ -37,14 +37,14 @@ done
 
 # 'Extra' arguments for trimming time; can be passed to ffmpeg-normalize
 # See this link for trimming: https://superuser.com/questions/258032/is-it-possible-to-use-ffmpeg-to-trim-off-x-seconds-from-the-beginning-of-a-video
-extra="-e=" # open
+flags_trim="-e=" # open
 if [ ! -z $lead ]; then
   echo "Trimming first $lead seconds."
-  extra+="-ss $lead "
+  flags_trim+="-ss $lead "
 fi
 if [ ! -z $trail ]; then
   echo "Trimming last $trail seconds."
-  extra+="-sseof $trail "
+  flags_trim+="-sseof $trail "
 fi
 
 # Trim trialing spaces for filenames
@@ -60,6 +60,9 @@ echo Name: $name
 directory="$(cat $(dirname $(realpath $0))/config | grep "directory" | cut -s -d '=' -f 2 | xargs)"
 directory="${directory/"~"/$HOME}" # don't expand spaces, but expand ~
 directory="${directory%/}" # trim trailing slash if present
+if $classical; then
+  directory="${directory%/*}/classical"
+fi
 rejects="$(cat $(dirname $(realpath $0))/config | grep "rejects" | cut -s -d '=' -f 2 | xargs)"
 rejects="${rejects/"~"/$HOME}"
 rejects="${rejects%/}"
@@ -85,6 +88,9 @@ flags="-f bestaudio --no-playlist"
 
 #------------------------------------------------------------------------------#
 # Download, using youtube-dl
+#------------------------------------------------------------------------------#
+# youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
+# youtube-dl -f bestaudio[ext=m4a] -t "$name" --metadata-from-title "%(artist)s - %(title)s" --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
 echo "Determining filename." && sleep 0.5
 echo $path_template
 path_old="$(youtube-dl --get-filename $flags "$url" -o "$path_template")" # no playlist, in case user provides playlist URL
@@ -93,10 +99,9 @@ ext_old="${path_old##*.}"
 echo "Downloading." && sleep 0.5
 youtube-dl $flags "$url" -o "$path_template" # no playlist, in case user provides playlist URL
 [ $? -ne 0 ] && echo "Error: Download failed." && exit 1
-# youtube-dl -f bestaudio[ext=m4a] --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
-# youtube-dl -f bestaudio[ext=m4a] -t "$name" --metadata-from-title "%(artist)s - %(title)s" --no-playlist --prefer-ffmpeg --embed-thumbnail "$url" -o "$path_old"
 $debug && cp "$path_old" "$directory/$name-raw.$ext_old" # original file, not normalized
-$nopp && echo "Skipping post processing." && exit
+# Bail
+[ $quick -ge 2 ] && exit 0
 
 #------------------------------------------------------------------------------#
 # Normalize audio and re-compress into AAC
@@ -108,9 +113,11 @@ $nopp && echo "Skipping post processing." && exit
 #   See: https://lifehacker.com/5810575/does-bitrate-really-make-a-difference-in-my-music
 #   But it seems otherwise, will be recompressed into roughly the original bitrate; probably
 #   doesn't make sense to decompress a compressed format, then save it in a higher resolution.
+#------------------------------------------------------------------------------#
 if $mp3; then # tried with and without intermediary, still fails
   echo "Normalizing volume, outputing to mp3." && sleep 0.5
-  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libmp3lame -o "$path_normalized"
+  # ffmpeg-normalize $flags_norm "$flags_trim" -f -c:a libmp3lame -o "$path_normalized" "$path_old"
+  ffmpeg-normalize "$path_old" $flags_norm "$flags_trim" -f -c:a libmp3lame -o "$path_normalized"
   # echo "Generating intermediate file." && sleep 0.5
   # ffmpeg-normalize "$path_old" -v -f -o "$path_intermediate"
   # echo "Normalizing volume, outputing to mp3." && sleep 0.5
@@ -119,23 +126,26 @@ if $mp3; then # tried with and without intermediary, still fails
   # ! $debug && rm "$path_intermediate"
 else # builtin aac thing sucks; make sure to brew install ffmpeg with option --with-fdk-aac
   echo "Normalizing volume, outputing to m4a." && sleep 0.5
-  # ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libfdk_aac -o "$path_normalized"
-  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -c:a libfdk_aac -o "$path_normalized"
+  # ffmpeg-normalize $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized" "$path_old"
+  ffmpeg-normalize "$path_old" $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized"
   [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
 fi
 # Repeat for debugging
 # Move files around, and potentially delete outdated files
 if $debug; then
-  ffmpeg-normalize "$path_old" $flags_norm "$extra" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
+  ffmpeg-normalize "$path_old" $flags_norm "$flags_trim" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
   cp "$path_normalized" "$path_new"
 else
   rm "$path_old"
   mv "$path_normalized" "$path_new"
 fi
+# Bail
+[ $quick -ge 1 ] && exit 0
 
 #------------------------------------------------------------------------------#
 # Change metadata using python function
+#------------------------------------------------------------------------------#
 echo "Adding metadata." && sleep 0.5
-metadata $flags_metadata --url="$url" "$path_new"
+ydm_metadata $flags_metadata --url="$url" "$path_new"
 [ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1
 $debug && cp "$path_new" "${path_new%.*}-metadata.${ext_new}"

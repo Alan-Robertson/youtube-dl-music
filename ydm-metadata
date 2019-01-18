@@ -13,10 +13,10 @@ otherwise, will use special MP4 metadata assignment. Requires musicbrainzngs (us
 # Discogs genre from **every available Master release** from the groups of recordings.
 
 # Tagging tools
+# PE1 is artist, CON is genre, ALB is album name, YER is year of recording,
+# ORY is original release year, IT2 is song title, APIC is artwork, and COMM is comment
 from mutagen.mp4 import MP4, MP4Cover, MP4StreamInfoError
 from mutagen.id3 import ID3, ID3NoHeaderError, TIT2, TPE1, TCON, TALB, TOAL, TDRC, TDOR, TDRL, APIC, COMM
-    # PE1 is artist, CON is genre, ALB is album name, YER is year of recording,
-    # ORY is original release year, IT2 is song title, APIC is artwork, and COMM is comment
 # Argument parsing
 import argparse
 # Database APIs

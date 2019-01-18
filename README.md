@@ -7,28 +7,29 @@ This script uses `youtube-dl` to download and save audio from youtube into `aac`
 ## Installation
 This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
 
-    git clone https://github.com/lukelbd/youtubetag
+    git clone https://github.com/lukelbd/youtube-dl-music
 
-This should create a directory named `youtubetag`. You then need to make sure the `youtube` and `metadata` executables are in your `$PATH` variable. This is up to you; the simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
+This should create a directory named `youtube-dl-music`. You then need to make sure the `ydm` and `ydm-metadata` executables are in your `$PATH` variable. The simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
 
-    export PATH="$HOME/youtubetag:$PATH"
+    export PATH="$HOME/youtube-dl-music:$PATH"
 
 then restart the shell or "source" the file with `source ~/.bash_profile`. Now, the tools you need will be accessible every time you start a terminal.
 
 <!-- Just make -->
 <!-- Run `setup` command once. -->
 ## Setup
-To use **`youtube`** you need to install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, then in the  `youtube` script comment out the first few lines and assign your desired download path to the `directory` variable.
+To use **`ydm`** you need to install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, then in the  `ydm` script comment out the first few lines and assign your desired download path to the `directory` variable.
 
-To use **`metadata`** a few more steps are required (if you just want to download music without tagging it, comment out the final line in `youtube`):
+To use **`ydm-metadata`** a few more steps are required (if you just want to download music without tagging it, always call `ydm` with either of the flags `-q` or `-Q`):
 
-  1. Make sure your version of `python3` is python3.6+; check this with `python3 --version`. The `metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
-  2. Run the `setup` command. This does the following:
-      * Installs the python packages needed for `metadata` (see below).
-      * Creates a file named `config` in the youtubetag directory.
-  2. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
+  1. Make sure your version of `python3` is python3.6+. Check this with `python3 --version`. The `ydm-metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
+  1. Run the `ydm-install` command.
+  1. Run the `setup` command. This does the following:
+      * Installs the python packages needed for `ydm-metadata` (see below).
+      * Creates a file named `config` in the `youtube-dl-music` directory.
+  1. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
       * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the **Generate token** button.
-  4. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+  1. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
       * To set the download location: `directory = <your music folder here>`.
       * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
       * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
@@ -63,16 +64,16 @@ If the `youtube` script **stops working**, it is often because `youtube.com` has
     youtube <URL> <filename>
 
 Filename can have un-escaped spaces. Escape any quotes/apostrophes. **Metadata will be inferred from 
-filename with the `metadata` script if you follow the format `<artist> - <song>`**; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
+filename with the `ydm-metadata` script if you follow the format `<artist> - <song>`**; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
 
 ## Usage of metadata script
-The metadata script is called automatically by `youtube` but you may want to use it or re-use it on existing files. Usage is as follows:
+The `ydm-metadata` script is called automatically by `ydm` but you may want to use it or re-use it on existing files. Usage is as follows:
 
-    metadata <flags> <filename(s)>
+    ydm-metadata [flags] [filename(s)]
 
 This time the filename(s) must have escaped spaces. The following flag options are available:
 
-* `--url=<url>`: Add a URL to file metadata as a "Comment". The `youtube` script automatically passes this argument.
+* `--url=<url>`: Add a URL to file metadata as a "Comment". The `ydm` script automatically passes this argument.
 * `--debug`: Echo some extra information during tagging process.
 * `--confirm`: Prompt user to confirm release group/release to be used for artwork.
 * `--genreonly`: Only add genre metadata, nothing else.
@@ -96,7 +97,7 @@ This tagging script is certainly not the fastest out there. For example the buil
 <!-- At least this was my thinking before. Now that I've sat down and spelled it out, I think I'm wrong... shouldn't strict artist search include searches with "extra words?" So maybe I can search artists and recordings all at once. -->
 
 ## Overview of metadata script
-The metadata script is called by default by the youtube-downloading `youtube` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags; `mp3` metadata is added to the ID3 header, while `m4a` metadata is added in some mysterious way that Apple pioneered, but should still be readable by most media players.
+The `ydm-metadata` script is called by default by the youtube-downloading `ydm` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags; `mp3` metadata is added to the ID3 header, while `m4a` metadata is added in some mysterious way that Apple pioneered, but should still be readable by most media players.
 
 Here's a play-by-play of what the metadata script does:
 <!-- 1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*. Search is strict, but a few exceptions. -->
