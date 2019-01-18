@@ -92,7 +92,7 @@ anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
 ################################################################################
 # Requist user yes/no input and parses
 def yesno():
-    if not options['confirm']:
+    if not options['confirm-art']:
         return True
     while True: # just keep going until get valid one
         response = input('Confirm (y/n)?')
@@ -387,9 +387,9 @@ def guess_album(recordings):
                         # Set up return dictionary
                         metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
                         # Optional exits for case where only want genres
-                        if options['genreonly'] and len(genres)==0:
+                        if options['genre-only'] and len(genres)==0:
                             continue # helpful messages were already relayed
-                        elif options['genreonly']:
+                        elif options['genre-only']:
                             return metadata
                         # 4) Next the album artwork
                         # First confirm user wants to use this album for artwork
@@ -652,7 +652,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     # TODO: Use argparser?
     url = '' # by default, write nothing
-    options = ['strict', 'genreonly', 'confirm', 'forget', 'debug']
+    options = ['strict', 'genre-only', 'confirm-art', 'forget', 'debug']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:
@@ -700,7 +700,7 @@ if __name__ == "__main__":
         if albumprops is None:
             raise ValueError("Found no metadata.")
         # Special options for just tagging genres
-        if options['genreonly']:
+        if options['genre-only']:
             print(f"Adding genres: {', '.join(albumprops['genres'])}.")
             if id3:
                 # Not sure how to replicate the below for ID3
