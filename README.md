@@ -58,7 +58,7 @@ If you do want to use **`ydm-metadata`**, a few more steps are required:
 
 ## Usage
 
-    ydm URL artist name - song title
+    ydm [flags] URL artist name - song title
 
 Everything after 'URL' is interpreted as part of the destination filename. The `-` is syntactically meaningful -- it indicates the separation between the artist name and the song title. This information is passed to `ydm-metadata` to tag the file.
 
