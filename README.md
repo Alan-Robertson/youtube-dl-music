@@ -65,7 +65,7 @@ Everything after 'URL' is interpreted as part of the destination filename. The `
 ## Usage of metadata script
 The `ydm-metadata` script is called automatically by `ydm`, but you may want to use it or re-use it on existing files. Usage is as follows:
 
-    ydm-metadata [flags] [filename(s)]
+    ydm-metadata [flags] file1 [file2 ...]
 
 This time the filename(s) must have escaped spaces. The following command-line options are available:
 
