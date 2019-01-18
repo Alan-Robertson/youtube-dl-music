@@ -78,7 +78,7 @@ This time the filename(s) must have escaped spaces. The following command-line o
 
 In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
 
-This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
+`ydm-metadata` is certainly not the fastest tagging algorithm out there. For example, the builtin cover art downloader for the Android app "PowerAmp" is pretty darn fast. `ydm-metadata` is designed to strictly *minimize tagging errors*, and get the *highest possible quality cover art*. So, it is slow, but very accurate.
 <!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->
 
 <!-- You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want. -->
