@@ -76,7 +76,7 @@ This time the filename(s) must have escaped spaces. The following command-line o
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
 * `--strict`: Apply filter on recording names, to make sure the words match.
 
-In some cases algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
+In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
 
 This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
 <!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->
