@@ -95,10 +95,9 @@ In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for 
 <!-- At least this was my thinking before. Now that I've sat down and spelled it out, I think I'm wrong... shouldn't strict artist search include searches with "extra words?" So maybe I can search artists and recordings all at once. -->
 
 ## Overview of metadata script
-The `ydm-metadata` script is called by default by the youtube-downloading `ydm` script, but it can also be called directly on any `.m4a`, `.aac`, and `.mp3` files in your library. Uses `Mutagen` to write tags; `mp3` metadata is added to the ID3 header, while `m4a` metadata is added in some mysterious way that Apple pioneered, but should still be readable by most media players.
+`ydm` calls the `ydm-metadata` script by default, but you can also use `ydm-metadata` manually on `m4a`, `aac`, and `mp3` files in your library. `Mutagen` is used to write tags. For `mp3` files, tags are added to the ID3 header, while for `aac` and `m4a` files, tags are added in some mysterious way that Apple pioneered (but should still be readable by most media players).
 
-Here's a play-by-play of what the metadata script does:
-<!-- 1. Gets the MusicBrainz artist ID from the *filename-inferred artist name*. Search is strict, but a few exceptions. -->
+Here's a play-by-play of what `ydm-metadata` does:
 
 1. Run strict search of MusicBrainz "recordings" matching the *filename-inferred* track name and with artist credits matching the *filename-inferred* artist name. Choose the first credit artist, and ask for user input if the first credit artists in the release list differ.
     * Allows for names starting with or without "the" (e.g. "Animals" vs. "The Animals" - you can choose to forego the "the", and this way the music in your filesystem will be sorted more naturally).
