@@ -54,13 +54,13 @@ If you do want to use **`ydm-metadata`**, a few more steps are required:
       * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
       * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
 
-**Important**: If the `ydm` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days. Just call `youtube-dl -U` or `pip install --upgrade youtube-dl` (depending on how it was installed), and it should start working again.
-
 ## Usage
 
     ydm [flags] URL artist name - song title
 
 Everything after 'URL' is interpreted as part of the destination filename. The `-` is syntactically meaningful -- it indicates the separation between the artist name and the song title. This information is passed to `ydm-metadata` to tag the file.
+
+**Important**: If  `ydm` **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days. Just call `youtube-dl -U` or `pip install --upgrade youtube-dl` (depending on how it was installed), and it should start working again.
 
 ## Usage of metadata script
 The `ydm-metadata` script is called automatically by `ydm`, but you may want to use it or re-use it on existing files. Usage is as follows:
@@ -78,7 +78,7 @@ This time the filename(s) must have escaped spaces. The following command-line o
 
 In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses, because parentheses often contain additional information unrelated to the song title. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
 
-This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
+`ydm-metadata` is certainly not the fastest tagging algorithm out there. For example, the builtin cover art downloader for the Android app "PowerAmp" is pretty darn fast. `ydm-metadata` is designed to strictly *minimize tagging errors*, and get the *highest possible quality cover art*. So, it is slow, but very accurate.
 <!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->
 
 <!-- You might ask: why do we run an artist search without also including the recording information, and make the user confirm? This is because I wasn't sure about the behavior of `search_recordings` run in `strict=True` mode when we don't know the artist ID. If artists with similar names (for example, a **tribute band**) share songs with the **same or similar title**, the search may return songs from artists we don't want. -->
