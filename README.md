@@ -4,43 +4,12 @@
 <!-- [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](lukelbd@gmail.com) -->
 This script uses `youtube-dl` to download and save audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script I created called `metadata`.
 
-## Installation
-This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
-
-    git clone https://github.com/lukelbd/youtube-dl-music
-
-This should create a directory named `youtube-dl-music`. You then need to make sure the `ydm` and `ydm-metadata` executables are in your `$PATH` variable. The simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
-
-    export PATH="$HOME/youtube-dl-music:$PATH"
-
-then restart the shell or "source" the file with `source ~/.bash_profile`. Now, the tools you need will be accessible every time you start a terminal.
-
-<!-- Just make -->
-<!-- Run `setup` command once. -->
-## Setup
-To use **`ydm`** you need to install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, then in the  `ydm` script comment out the first few lines and assign your desired download path to the `directory` variable.
-
-To use **`ydm-metadata`** a few more steps are required (if you just want to download music without tagging it, always call `ydm` with either of the flags `-q` or `-Q`):
-
-  1. Make sure your version of `python3` is python3.6+. Check this with `python3 --version`. The `ydm-metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
-  1. Run the `ydm-install` command.
-  1. Run the `setup` command. This does the following:
-      * Installs the python packages needed for `ydm-metadata` (see below).
-      * Creates a file named `config` in the `youtube-dl-music` directory.
-  1. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
-      * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the **Generate token** button.
-  1. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
-      * To set the download location: `directory = <your music folder here>`.
-      * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
-      * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
-
-If the `youtube` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days; just call `youtube-dl -U` or `pip install --upgrade youtube-dl` (depending on the installation method) and it should start working again.
-<!-- If you just want to download the `m4a` files and do nothing else, comment out parts of the `youtube` script that adjust volume/add metadata. -->
-
 ## Non-Python Dependency
   * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `brew install ffmpeg` (Homebrew on Mac).
 
-## Python Package Dependencies
+## Python Dependencies
+The below are all installed by the `ydm-install` command (see the "Installation" section).
+
   * [youtube-dl](https://github.com/rg3/youtube-dl): script for downloading youtube media.
   * [ffmpeg-normalize](https://github.com/slhck/ffmpeg-normalize): python package for normalizing volume, requires ffmpeg accessible from shell.
   <!-- ; `pip install ffmpeg-normalize`. -->
@@ -59,26 +28,53 @@ If the `youtube` script **stops working**, it is often because `youtube.com` has
   <!-- * [Python Imaging Library](https://pypi.python.org/pypi/PIL): for warping Album Art images; `pip install PIL`. -->
   <!-- * [unidecode](https://pypi.python.org/pypi/Unidecode): for translating accented characters to ASCII, so you don't have to get accents perfectly correct in your filename; `pip install unidecode`. -->
 
+## Installation and Setup
+This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
+
+    git clone https://github.com/lukelbd/youtube-dl-music
+
+This should create a directory named `youtube-dl-music`. You then need to make sure the `ydm` and `ydm-metadata` executables are in your `$PATH` variable. The simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
+
+    export PATH="$HOME/youtube-dl-music:$PATH"
+
+then restart the shell or "source" the file with `source ~/.bash_profile`. Now, the tools you need will be accessible every time you start a terminal.
+
+If you don't want to use `ydm-metadata`, just manually install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, and always use the flag `-q` when calling the `ydm` command.
+
+If you do want to use **`ydm-metadata`**, a few more steps are required:
+
+  1. Make sure your version of `python3` is python3.6+. Check this with `python3 --version`. The `ydm-metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
+  1. Run the `ydm-install` command. This does the following:
+      * Installs the python packages needed for `ydm-metadata` (see below).
+      * Creates a file named `config` in the `youtube-dl-music` directory.
+  1. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
+      * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the **Generate token** button.
+  1. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
+      * To set the download location: `directory = <your music folder here>`.
+      * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
+      * To use the MusicBrainz API: no token is needed; just add your account username and password with `username = <your username here>` and `password = <your password here>`.
+
+**Important**: If the `ydm` script **stops working**, it is often because `youtube.com` has changed how they store video/audio. The `youtube-dl` developers are very active and usually will release an updated version within a couple days. Just call `youtube-dl -U` or `pip install --upgrade youtube-dl` (depending on how it was installed), and it should start working again.
+
 ## Usage
 
-    youtube <URL> <filename>
+    ydm URL artist name - song title
 
-Filename can have un-escaped spaces. Escape any quotes/apostrophes. **Metadata will be inferred from 
-filename with the `ydm-metadata` script if you follow the format `<artist> - <song>`**; everything left of space-dash-space is artist, everything to the right is the song name. Filename is not inferred from the youtube URL, because youtube video-naming is often inconsistent.
+Everything after 'URL' is interpreted as part of the destination filename. The `-` is syntactically meaningful -- it indicates the separation between the artist name and the song title. This information is passed to `ydm-metadata` to tag the file.
 
 ## Usage of metadata script
-The `ydm-metadata` script is called automatically by `ydm` but you may want to use it or re-use it on existing files. Usage is as follows:
+The `ydm-metadata` script is called automatically by `ydm`, but you may want to use it or re-use it on existing files. Usage is as follows:
 
     ydm-metadata [flags] [filename(s)]
 
-This time the filename(s) must have escaped spaces. The following flag options are available:
+This time the filename(s) must have escaped spaces. The following command-line options are available:
 
-* `--url=<url>`: Add a URL to file metadata as a "Comment". The `ydm` script automatically passes this argument.
-* `--debug`: Echo some extra information during tagging process.
+* `--url=<url>`: Add a URL to the file metadata as a "Comment". The `ydm` script automatically passes this argument.
 * `--confirm`: Prompt user to confirm release group/release to be used for artwork.
 * `--genreonly`: Only add genre metadata, nothing else.
 * `--forget`: Do not read previous user responses to ambiguous artist names from the config file.
 * `--strict`: Apply filter on recording names, to make sure the words match. In some cases algorithm fails with this option (e.g. search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses), but in other cases it may be necessary (e.g. without `strict`, "Pink Floyd - Matilda Mother" is included from input "Pink Floyd - Mother").
+* `--debug`: Increase verbosity.
 
 This tagging script is certainly not the fastest out there. For example the builtin cover art-downloader for the PowerAmp Android app cover art-downloader is pretty darn fast. Instead, it is designed to strictly minimize the situation where music is tagged with incorrect information, and to get the best cover art possible. So it is slow, but very accurate.
 <!-- **never, ever tag music with the incorrect information**. This is my pet peeve. So it is slow, but it is very accurate. -->

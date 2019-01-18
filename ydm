@@ -146,6 +146,6 @@ fi
 # Change metadata using python function
 #------------------------------------------------------------------------------#
 echo "Adding metadata." && sleep 0.5
-ydm_metadata $flags_metadata --url="$url" "$path_new"
+ydm-metadata $flags_metadata --url="$url" "$path_new"
 [ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1
 $debug && cp "$path_new" "${path_new%.*}-metadata.${ext_new}"
