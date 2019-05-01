@@ -5,7 +5,7 @@
 This script uses `youtube-dl` to download and save audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script called `ydm-metadata`.
 
 ## Non-Python Dependency
-  * [ffmpeg](https://github.com/FFmpeg/FFmpeg): batteries-included package for creating/modifying media files; `conda install ffmpeg` (any anaconda distribution) or `brew install ffmpeg` (Homebrew on Mac).
+  * [ffmpeg](https://github.com/FFmpeg/FFmpeg): Batteries-included package for creating/modifying media files. I recommend using [MacPorts](https://www.macports.org) to install using `sudo port install ffmpeg +nonfree`. The `+nonfree` flag is required to add the proprietary `libfdk_aac` AAC encoding package, which is [superior](https://trac.ffmpeg.org/wiki/Encode/AAC) to the equivalent free package.
 
 ## Python Dependencies
 The below are all installed by the `ydm-install` command (see the "Installation" section).

@@ -116,8 +116,7 @@ if $mp3; then
   # ffmpeg-normalize "$path" -v -f -o "$path_intermediate"
   # ffmpeg -y -i "$path_intermediate" -c:a libmp3lame "$path_normalized"
   [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
-# Save to m4a
-# Builtin aac thing sucks; make sure to brew install ffmpeg with option --with-fdk-aac
+# Save to m4a, uses highest quality encoder
 else
   echo "Normalizing volume, outputing to m4a."
   ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized"
@@ -136,4 +135,3 @@ mv "$path_normalized" "$path_new"
 echo "Adding metadata."
 ydm-metadata $flags_metadata --url="$url" "$path_new"
 [ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1
-$debug && cp "$path_new" "${path_new%.*}-metadata.${ext_new}"
