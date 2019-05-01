@@ -1,4 +1,7 @@
 #!/bin/bash
+#------------------------------------------------------------------------------#
+# Installs python dependences and makes config file
+#------------------------------------------------------------------------------#
 # First check the python packages are installed
 dependencies=(mutagen musicbrainzngs discogs_client bs4 PIL unidecode pandas ffmpeg-normalize youtube-dl)
 for dependency in ${dependencies[@]}; do

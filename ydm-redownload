@@ -1,5 +1,9 @@
 #!/usr/bin/env python
-# Update based on youtube urls
+#------------------------------------------------------------------------------#
+# Re-downloads songs based on youtube URLs
+# Old version of this package downloaded inferior audio quality so this
+# was used to improve the audio quality
+#------------------------------------------------------------------------------#
 # For wisdom of shell=True, see: https://stackoverflow.com/a/3172488/4970632
 # It just expands environment variables, globs, etc., which we don't need or want
 import os
@@ -9,13 +13,12 @@ import time
 import glob
 import subprocess # call is synchronous, Popen is asynchronous
 from mutagen.mp4 import MP4
-print(os.environ['PATH'])
-regex = r'\?v[^=]' # ?v identifier malformed
 for file in sys.argv[1:]:
     print(f"File: \"{file}\".")
     tags = MP4(file)
     value = tags["\xa9cmt"]
-    if not value or not value[0]: continue
+    if not value or not value[0]:
+        continue
     if 'http' in value[0]: # contains valid url
-        subprocess.call(['youtube', value[0], os.path.basename(os.path.splitext(file)[0])], shell=False)
+        subprocess.call(['ydm', value[0], os.path.basename(os.path.splitext(file)[0])], shell=False)
 
