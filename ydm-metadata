@@ -37,9 +37,9 @@ import sys
 import os
 import unidecode as ud # converting accents to normal characters
 
-################################################################################
+#------------------------------------------------------------------------------#
 # Configure
-################################################################################
+#------------------------------------------------------------------------------#
 # File names
 storage = os.path.dirname(os.path.realpath(__file__))
 config = f"{storage}/config"
@@ -81,9 +81,9 @@ anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
 # anglo_countries = ['XW','XE','US','GB','AU','CA','IE']
 # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
 
-################################################################################
+#------------------------------------------------------------------------------#
 # Helper functions
-################################################################################
+#------------------------------------------------------------------------------#
 # Request user yes/no input and parses
 def confirm():
     if not options['confirm']:
@@ -96,10 +96,9 @@ def confirm():
             elif response[0].lower()=='y':
                 return True # continue?
         print('Invalid choice.') 
-
 # Get URL data from HTML lines
 # Each page.find moves the "reader/parser" farther down the object
-def findurls(page):
+def find_urls(page):
     start_link = page.find("a href")
     if start_link == -1:
         return None, 0
@@ -108,25 +107,9 @@ def findurls(page):
     url = page[start_quote+1:end_quote]
     return url, end_quote
 
-# Get Discogs styles
-# Need to convert non-ASCII characters back to unicode
-# See 1st comment on this answer: https://stackoverflow.com/a/5187097/4970632 
-def findstyles():
-    data = ''
-    prefix = 'https://reference.discogslabs.com/browse/style?page='
-    for page in range(1,11+1):
-        content = requests.get(prefix+str(page)).content # is type 'bytes'
-        data += BeautifulSoup(content, 'lxml').decode() # is type 'string'
-    end_keys = [m.end() for m in re.finditer("\"title\":", data)]
-    start_quotes = [data.find('"',k) for k in end_keys]
-    end_quotes = [data.find('"',q+1) for q in start_quotes]
-    styles = [data[s+1:e] for s,e in zip(start_quotes,end_quotes)]
-    styles = [bytes(s,'utf-8').decode('unicode_escape') for s in styles]
-    return styles
-
-################################################################################
+#------------------------------------------------------------------------------#
 # Function to get recording data from just the simple artist-recording names
-################################################################################
+#------------------------------------------------------------------------------#
 def guess_recordings(artist, recording): #artistnames, artistids):
     """Searches MusicBrainz for the artist and recordings corresponding to input.
     Tries to do this intelligently, and account for some rare special cases."""
@@ -135,23 +118,19 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     # Allows for some limited exceptions
     def words(string):
         iwords = []
-        ignorewords = ['part', 'the', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix']
+        ignore_words = ['part', 'the', 'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix']
         for istring in string.split('/'):
             istring = ud.unidecode(string) # get plain ASCII letters from accents
-            istring = re.sub("\.","",istring) # e.g. S.O.S. goes to SOS
-                # make sure to escape the '.'! that was a really dumb bug!
-            istring = re.sub("&"," and ",istring) # standardize and symbols
-            istring = re.sub(r"\(.*\)","",istring) # delete stuff in parentheses
-            # istring = re.sub(r"\((.*)\)",r"\1",istring) # remove parentheses
-            istring = re.sub(r"“.*”","",istring) # delete stuff in quotes
+            istring = re.sub("&", " and ", istring) # no symbols
+            istring = re.sub(r"\(.*\)", "", istring) # delete stuff in parentheses
+            istring = re.sub(r"“.*”", "", istring) # delete stuff in quotes
+            istring = re.sub(r"[^\w\s]", " ", istring) # delete punctuation
+            iwords += [[w for w in istring.lower().split()
+                if w not in ignore_words and len(w)>1]] # just add the words; the accounts for e.g. The Stooges
             # istring = re.sub(r"“(.*)”",r"\1",istring) # remove quotes
-            istring = re.sub(r"[^\w\s]"," ",istring) # delete punctuation and stuff
+            # istring = re.sub(r"\((.*)\)",r"\1",istring) # remove parentheses
             # istring = istring.split(" and ")[0] # e.g. Joan Jett "and the Blackhearts"
             # istring = istring.split(" ft ")[0] # e.g. Queen ft. David Bowie
-            iwords += [[w for w in istring.lower().split()
-                if w not in ignorewords and len(w)>1]] # just add the words; the accounts for e.g. The Stooges
-            # iwords += [[w for w in istring.lower().split()
-            #     if w!='the' and len(w)>1]] # ignore single letters
         return iwords
     # Parsing user response
     def parse(choices, N): # N is max possible number
@@ -281,9 +260,9 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     # Return results
     return artist, recordings
 
-################################################################################
+#------------------------------------------------------------------------------#
 # Function to guess album from list of recording dictionaries
-################################################################################
+#------------------------------------------------------------------------------#
 def guess_album(recordings):
     """Guesses album group from input info. Returns a dictionary of metadata information
     including year, album title, image, and genres."""
@@ -401,9 +380,64 @@ def guess_album(recordings):
         raise ValueError("No metadata to write.")
     return metadata
 
-################################################################################
+#------------------------------------------------------------------------------#
+# Function to get "best" artwork from a release group
+#------------------------------------------------------------------------------#
+def guess_artwork(releases):
+    """Gets album artwork. Note country is tricky; often japanese releases have 
+    japenese text on them, but seems that European release are usually good and sometimes
+    are the only available digital copies. Maybe just ignore asian countries?"""
+    # First, go by release medium
+    years = [int(release.get('date','0001')[:4]) for release in releases if release.get('date','0001')]
+    filter_known = [False for release in releases] # want to catch any unknown media
+    for m,medium in enumerate(media_pref):
+        if medium=='other': # we are at the end; see if any media were left
+            filter_ = [not known for known in filter_known] # iterate over what's left
+        else: # filter, and add known media to lsit
+            filter_ = [any(medium in _.get('format','xxxxx').lower() for _ in release.get('medium-list',[{}]))
+                for release in releases] # last one is unknown
+            filter_known = [f1 or f2 for f1,f2 in zip(filter_,filter_known)]
+        releasesA = [r for f,r in zip(filter_,releases) if f]
+        yearsA = [y for f,y in zip(filter_,years) if f]
+        for year in sorted(set(yearsA), reverse=True):
+            releasesB = [r for r,y in zip(releasesA,yearsA) if y==year]
+            for country in anglo_countries:
+                # Also try non-anglo countries (sometimes only one available)
+                if country=='other':
+                    releasesC = [r for r in releasesB if r.get('country','NA') not in anglo_countries]
+                else:
+                    releasesC = [r for r in releasesB if r.get('country','NA')==country]
+                # Try to return image art; remaining releases, choose order at random
+                for release in releasesC:
+                    # User input
+                    rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
+                    rcountry, rtitle = release.get('country',''), release.get('title','')
+                    if options['verbose']:
+                        print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', country '{rcountry}', year '{year}'.")
+                    if not confirm():
+                        continue
+                    # Pull artwork
+                    # This is a slow step, so make sure to print message
+                    try:
+                        print('Checking for artwork...')
+                        data = mb.get_image_front(release.get('id',''))
+                    except ResponseError:
+                        continue
+                    # Manipulate
+                    image = Image.open(BytesIO(data))
+                    if options['verbose']:
+                        print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping to square if not equal.")
+                    if image.size[0]!=image.size[1]:
+                        sqsize = min(image.size)
+                        image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
+                        data = BytesIO()
+                        image.save(data, format='JPEG')
+                        data = data.getvalue()
+                    return data
+
+#------------------------------------------------------------------------------#
 # Functions to get genres from both MusicBrainz and Discogs
-################################################################################
+#------------------------------------------------------------------------------#
 def genres_discogs(rgid):
     """Gets the discogs page linked to a release group, and pulls the genre info
     or album artwork from there."""
@@ -419,7 +453,7 @@ def genres_discogs(rgid):
     urls = []
     url = True # fill initial case
     while url: # while non-empty
-        url, n = findurls(page)
+        url, n = find_urls(page)
         page = page[n:]
         if url: urls.append(url)
 
@@ -590,62 +624,9 @@ def genres_musicbrainz(recordings):
             print("Warning: No MusicBrainz genres found, couldn't find any useful recording tags.")
         return []
 
-################################################################################
-# Function to get "best" artwork from a release group
-################################################################################
-def guess_artwork(releases):
-    """Gets album artwork. Note country is tricky; often japanese releases have 
-    japenese text on them, but seems that European release are usually good and sometimes
-    are the only available digital copies. Maybe just ignore asian countries?"""
-    # First, go by release medium
-    years = [int(release.get('date','0001')[:4]) for release in releases if release.get('date','0001')]
-    filter_known = [False for release in releases] # want to catch any unknown media
-    for m,medium in enumerate(media_pref):
-        if medium=='other': # we are at the end; see if any media were left
-            filter_ = [not known for known in filter_known] # iterate over what's left
-        else: # filter, and add known media to lsit
-            filter_ = [any(medium in _.get('format','xxxxx').lower() for _ in release.get('medium-list',[{}]))
-                for release in releases] # last one is unknown
-            filter_known = [f1 or f2 for f1,f2 in zip(filter_,filter_known)]
-        releasesA = [r for f,r in zip(filter_,releases) if f]
-        yearsA = [y for f,y in zip(filter_,years) if f]
-        for year in sorted(set(yearsA), reverse=True):
-            releasesB = [r for r,y in zip(releasesA,yearsA) if y==year]
-            for country in anglo_countries:
-                # Also try non-anglo countries (sometimes only one available)
-                if country=='other':
-                    releasesC = [r for r in releasesB if r.get('country','NA') not in anglo_countries]
-                else:
-                    releasesC = [r for r in releasesB if r.get('country','NA')==country]
-                # Try to return image art; remaining releases, choose order at random
-                for release in releasesC:
-                    # User input
-                    rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
-                    rcountry, rtitle = release.get('country',''), release.get('title','')
-                    if options['verbose']:
-                        print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', country '{rcountry}', year '{year}'.")
-                    if not confirm():
-                        continue
-                    # Pull artwork
-                    try: 
-                        data = mb.get_image_front(release.get('id',''))
-                    except ResponseError:
-                        continue
-                    # Manipulate
-                    image = Image.open(BytesIO(data))
-                    if options['verbose']:
-                        print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping to square if not equal.")
-                    if image.size[0]!=image.size[1]:
-                        sqsize = min(image.size)
-                        image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
-                        data = BytesIO()
-                        image.save(data, format='JPEG')
-                        data = data.getvalue()
-                    return data
-
-################################################################################
+#------------------------------------------------------------------------------#
 # Execute when invoked from commandline
-################################################################################
+#------------------------------------------------------------------------------#
 if __name__ == "__main__":
     # Parse all command-line arguments
     # TODO: Use argparser?
@@ -667,7 +648,7 @@ if __name__ == "__main__":
         else:
             filepaths.append(arg)
 
-    for filepath in filepaths: # instead require escapes and can loop through
+    for filepath in filepaths:
         # Check existence of files and infer artist/track information
         if not os.path.exists(filepath):
             raise ValueError(f"Could not find file {filepath}.")
@@ -698,9 +679,12 @@ if __name__ == "__main__":
             raise ValueError("Found no metadata.")
 
         # Edit the ID3 header, if file has one
-        print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
-            f"'{albumprops['title']}', year '{albumprops['year']}', "
-            f"genres {'<none>' if len(albumprops['genres'])==0 else ', '.join(albumprops['genres'])}.")
+        message = f"Album '{albumprops['title']}', year {albumprops['year']}"
+        if len(albumprops['genres'])==0:
+            message += '.'
+        else:
+            message += (', genres ' + ', '.join(albumprops['genres']) + '.')
+        print(message)
         if id3:
             # Below are ID3v2, not ID3v2.4 (default format of mutagen, and modern version)
             tags.delete(filepath) # delete old data, if we downloaded from somewhere; want to assigne my better data
@@ -709,15 +693,16 @@ if __name__ == "__main__":
             tags["TIT2"] = TIT2(text=recording) # just track name
             tags["COMM"] = COMM(text=url, lang="eng", desc="URL")
             # Album stuff
-            # tags["TYER"] = TYER(text=data['year']) # doesn't show up in swinsian, for some reason
-            # tags["TORY"] = TORY(text=data['year']) # maybe this will
-            # tags["TDAT"] = TDAT(text=data['year']) # recording date(s) (?)
-            # tags["TRDA"] = TRDA(text='0101') # recording date, MMDD
             tags["TDOR"] = TDOR(text=albumprops['year']) # original release time
             tags["TDRC"] = TDRC(text=albumprops['year']) # recording time
             tags["TDRL"] = TDRL(text=albumprops['year']) # release time
             tags["TALB"] = TALB(text=albumprops['title']) # album
             tags["TOAL"] = TOAL(text=albumprops['title']) # original album
+            # tags["TYER"] = TYER(text=data['year']) # doesn't show up in swinsian, for some reason
+            # tags["TORY"] = TORY(text=data['year']) # maybe this will
+            # tags["TDAT"] = TDAT(text=data['year']) # recording date(s) (?)
+            # tags["TRDA"] = TRDA(text='0101') # recording date, MMDD
+            # Artwork
             if albumprops['image'] is not None:
                 tags["APIC"] = APIC(data=albumprops['image'])
             if albumprops['genres'] is not None:
