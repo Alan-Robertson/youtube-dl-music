@@ -36,12 +36,6 @@ import re # needed later
 import sys
 import os
 import unidecode as ud # converting accents to normal characters
-# Dictionary setup (no longer implemented)
-# from enchant import Dict
-# dictionary = Dict('en_US')
-# for exception in ['indie','fi','&']: # as in lo-fi, hi-fi
-#     dictionary.add(exception) # not in dictionary, but we allow it
-#         # also need to add ampersand, because returns False
 
 ################################################################################
 # Configure
@@ -80,19 +74,19 @@ mb.set_useragent('Self', 'NA', contact=config.get('contact',''))
 # Config Discogs
 client = discogs_client.Client('Personal', user_token=config['token'])
 # Some global options
+# Unknown countries/broad regions seem to be less likely to not have annoying extra border text
+# e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
 media_pref = ('digital','usb','cd','dvd','cassette','vinyl','xxxxx','other')
 anglo_countries = ['NA','XU','XW','XE','US','GB','AU','CA','IE','other']
 # anglo_countries = ['XW','XE','US','GB','AU','CA','IE']
 # anglo_countries = ('US','GB','CA','AU','IE','JP','XE','XU','XW','NA')
-    # unknown countries/broad regions seem to be less likely to not have annoying extra border text
-    # e.g. Beatles Sgt. Pepper's: all but the NA-digital-release have "anniversary edition" on edge
 
 ################################################################################
 # Helper functions
 ################################################################################
-# Requist user yes/no input and parses
-def yesno():
-    if not options['confirm-art']:
+# Request user yes/no input and parses
+def confirm():
+    if not options['confirm']:
         return True
     while True: # just keep going until get valid one
         response = input('Confirm (y/n)?')
@@ -196,14 +190,12 @@ def guess_recordings(artist, recording): #artistnames, artistids):
     newrecordings = [None]
     while len(newrecordings)>0:
         # Get recordings; can only run through 100 at a time at most, so make sure to get all
-        # newrecordings = mb.search_recordings(searchrecording, artist=artist,
-        #         strict=True, limit=100, offset=offset)['recording-list']
-        if offset>0: print(f'Found {offset} recordings...') # message
-        if offset%100!=0: break # makes things a bit quicker
+        if offset>0:
+            print(f'Found {offset} recordings...') # message
+        if offset % 100 != 0:
+            break # makes things a bit quicker
         newrecordings = mb.search_recordings(recording, artist=artist,
                 strict=True, limit=100, offset=offset)['recording-list']
-        # print([recording.get('title','') for recording in newrecordings])
-        # print([recording.get('artist-credit',[{}])[0].get('artist',{}).get('name','') for recording in newrecordings])
         if offset==0 and len(newrecordings)==0:
             # Typo in name; try to repair! Then re-run loop with new name.
             if triedagain:
@@ -215,17 +207,16 @@ def guess_recordings(artist, recording): #artistnames, artistids):
                 newrecording = mb.search_recordings(recording, artist=artist,
                         strict=False, limit=50)['recording-list'][0]
                 recording, artist = newrecording['title'], newrecording['artist-credit'][0]['artist']['name']
-                print(f"Warning: Search failed. Will try again with artist \"{artist}\" and "
-                        f"recording name \"{recording}.\"")
+                print(f"Warning: Search failed. Will try again with artist \"{artist}\" and recording name \"{recording}.\"")
             except (IndexError, KeyError): # no results or something
-                raise ValueError("No recordings found. You might have a typo in your artist or title name. "
-                    "Tried to repair typo with non-strict search, with no luck.")
+                raise ValueError("No recordings found. You might have a typo in your artist or title name. Tried to repair typo with non-strict search, with no luck.")
         else:
             # Add to list of names
             if triedagain and offset==0: # only after we were successful
                 print(f"Warning: Probable typo in your filename; should be should be \"{artist} - {recording}.\"")
             recordings.extend(newrecordings)
             offset += len(newrecordings)
+    # Lists
     if len(recordings)==0:
         raise ValueError("No recordings found. You might have a typo in your title or artist name.")
     recartists = [irecording['artist-credit'][0] for irecording in recordings
@@ -272,20 +263,18 @@ def guess_recordings(artist, recording): #artistnames, artistids):
         # Don't need a list of possible ids; just use the only one left
         recordings = [irecording for irecording,recartistid in zip(recordings,recartistids)
             if recartistid==uqartists[0].get('id','')] # make sure they are in user-selected choice
-    print(f'{len(recordings)} recordings with valid artist found.')
 
     # (Step 2) Filter out bad/unwanted recordings
     # Translate recordings, so no rejection due to capitalization/punctuation
     if options['strict']:
-        if options['debug']:
+        if options['verbose']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Discovered track names:',*rectitles,sep='\n')
         recordings = [irecording for irecording in recordings if # check equality of word-lists
             any(x==y for x,y in zip(words(recording),words(irecording.get('title',''))))]
-        if options['debug']:
+        if options['verbose']:
             rectitles = {irecording.get('title','') for irecording in recordings}
             print('Filtered track names:',*rectitles,sep='\n')
-    print(f'{len(recordings)} recordings with valid title found.')
     if len(recordings)==0:
         raise ValueError("No recordings found. You might have a typo in your title name.")
 
@@ -330,7 +319,8 @@ def guess_album(recordings):
         group['releases'] = greleases
         group['recordings'] = grecordings
         groups.append(group)
-    print(f"{len(releases):d} releases consolidated into {len(groups)} release groups ({duplicates:d} duplicates removed).")
+    # Message
+    print(f"Consolidated {len(releases):d} releases into {len(groups)} release groups ({duplicates:d} duplicates removed).")
 
     # Add new information to the original release-group dictionaries
     # This information will be used to sort albums by a hieararchy of preferred characteristics
@@ -384,31 +374,29 @@ def guess_album(recordings):
                                 genres = mgenres[:limit]
                             else:
                                 genres = dgenres + mgenres[:len(dgenres)]
-                        # Set up return dictionary
+                        # Consolidate info so far
                         metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
-                        # Optional exits for case where only want genres
-                        if options['genre-only'] and len(genres)==0:
-                            continue # helpful messages were already relayed
-                        elif options['genre-only']:
-                            return metadata
                         # 4) Next the album artwork
                         # First confirm user wants to use this album for artwork
                         checkyears = [year for year in group['years'] if year!=9999]
                         checkyears = [-1] if len(checkyears)==0 else checkyears
-                        print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
-                            f"count {group['count']}, earliest year '{min(checkyears)}', latest year '{max(checkyears)}'.")
-                        if not yesno(): # yesno() just returns True if "confirm" is False
+                        if options['verbose']:
+                            print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
+                                  f"count {group['count']}, earliest year '{min(checkyears)}', latest year '{max(checkyears)}'.")
+                        if not confirm():
                             continue
                         image = guess_artwork(group['releases'])
                         if image is None:
-                            print("No album artwork available.")
+                            if options['verbose']:
+                                print("No album artwork available for this group.")
                             continue
                         else:
                             metadata.update({'image':image})
                             return metadata
 
     # Exit from here if failed to get artwork every time
-    print("Failed to find album artwork.")
+    if options['verbose']:
+        print("Warning: Failed to find album artwork.")
     if metadata is None:
         raise ValueError("No metadata to write.")
     return metadata
@@ -439,15 +427,19 @@ def genres_discogs(rgid):
     # And parse out the discogs release id
     urls = [*{url.rstrip('/') for url in urls if 'discogs' in url}]
     if len(urls)==0:
-        print('No Discogs genres found: could not find URL on MusicBrainz page.')
+        if options['verbose']:
+            print('Warning: No Discogs genres found, could not find URL on MusicBrainz page.')
         return []
     if len(urls)>1:
-        print(f"No Discogs genres found: ambiguous number of URL candidates on MusicBrainz page: {', '.join(urls)}.")
+        if options['verbose']:
+            print(f"Warning: No Discogs genres found, ambiguous number of URL candidates on MusicBrainz page: {', '.join(urls)}.")
         return []
     master = os.path.basename(urls[0]) # because it is the last part after slash
-    try: master = int(master)
+    try:
+        master = int(master)
     except TypeError:
-        print('No Discogs genres found: could not parse the URL found on MusicBrainz page.')
+        if options['verbose']:
+            print('Warning: No Discogs genres found, could not parse the URL found on MusicBrainz page.')
         return []
     # Finally, call discogs by release-group id
     data = client.master(master) # this function just looks up id, returns stuff
@@ -458,7 +450,8 @@ def genres_discogs(rgid):
     if genres is None: genres = []
     genres = genres+styles
     if len(genres)==0:
-        print("No Discogs genres found: none listed under the 'master' release.")
+        if options['verbose']:
+            print("Warning: No Discogs genres found, none listed under the 'master' release.")
         return []
     if 'Funk / Soul' in genres: # special filter
         remove = genres.index('Funk / Soul')
@@ -468,9 +461,11 @@ def genres_discogs(rgid):
     genres = [genre for genre in genres if genre in discogs_genres
             and not (genre in added or added.add(genre))]
     if len(genres)==0:
-        print("No Discogs genres found: labels were too vague, e.g. \"Rock\".")
+        if options['verbose']:
+            print("Warning: No Discogs genres found, labels were too vague, e.g. \"Rock\".")
         return []
-    print(f"Discogs genres for writing: {', '.join(genres)}.")
+    if options['verbose']:
+        print(f"Discogs genres for writing: {', '.join(genres)}.")
     return genres
 
 def genres_musicbrainz(recordings):
@@ -489,13 +484,14 @@ def genres_musicbrainz(recordings):
     genres = sorted(list(tags.items()), key=lambda x: x[1], reverse=True) # (genre,count) tuples
     genres = [[*genre] for genre in genres] # convert to lists
     if len(genres)==0:
-        print("No MusicBrainz genres found: taglist was empty.")
+        if options['verbose']:
+            print("Warning: No MusicBrainz genres found, taglist was empty.")
         return []
 
     # Echo message (do this every time, better)
     igenres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
     genres_announce = [f"{genre} ({count:d})" for genre,count in zip(igenres,counts) if count>0]
-    if options['debug']:
+    if options['verbose']:
         print(f"MusicBrainz taglist: {', '.join(genres_announce)}.")
 
     # Split up strings suspected to contain multiple genres
@@ -571,25 +567,27 @@ def genres_musicbrainz(recordings):
     # Filter the genre list by Discogs genres: compare where alphanumeric characters
     # match a Discogs style, then use the exact Discogs convention for punctuation
     # and capitalization
-    added = set() # start an empty set
     standardize = lambda string: ' '.join(re.sub('\W',' ',string).split()).lower() # non-alphenumeric char == \W
     discogs_std = [standardize(g) for g in discogs_genres] # standard names for comparison
     genres = [(discogs_genres[discogs_std.index(standardize(genre[0]))], genre[1])
             for genre in genres if standardize(genre[0]) in discogs_std
             and genre[1]>0] # make sure at least one "count" is present
+    # If genre in added, 2nd statement is not called, but that's ok because
+    # we don't need to re-add it to the set
+    added = set() # start an empty set
     genres = [genre for genre in genres if not (genre[0] in added or added.add(genre[0]))]
-        # if genre in added, 2nd statement is not called, but that's ok because
-        # we don't need to re-add it to the set
 
     # Now return, and echo message
     # Preserved counts until this point, so message is more informative
     if len(genres)>0:
         genres, counts = zip(*genres) # see: https://stackoverflow.com/a/44157777/4970632
         genres_announce = [f"{genre} ({count:d})" for genre,count in zip(genres,counts)]
-        print(f"MusicBrainz genres for writing: {', '.join(genres_announce)}.")
+        if options['verbose']:
+            print(f"MusicBrainz genres for writing: {', '.join(genres_announce)}.")
         return [*genres]
     else:
-        print("No MusicBrainz genres found: couldn't find any useful recording tags.")
+        if options['verbose']:
+            print("Warning: No MusicBrainz genres found, couldn't find any useful recording tags.")
         return []
 
 ################################################################################
@@ -624,9 +622,9 @@ def guess_artwork(releases):
                     # User input
                     rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
                     rcountry, rtitle = release.get('country',''), release.get('title','')
-                    print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', "\
-                        f"country '{rcountry}', year '{year}'.")
-                    if not yesno():
+                    if options['verbose']:
+                        print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', country '{rcountry}', year '{year}'.")
+                    if not confirm():
                         continue
                     # Pull artwork
                     try: 
@@ -635,8 +633,8 @@ def guess_artwork(releases):
                         continue
                     # Manipulate
                     image = Image.open(BytesIO(data))
-                    print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping "\
-                            "to square if not equal.")
+                    if options['verbose']:
+                        print(f"Image shape: {image.size[0]} x {image.size[1]}. Warping to square if not equal.")
                     if image.size[0]!=image.size[1]:
                         sqsize = min(image.size)
                         image = image.resize((sqsize,sqsize), Image.ANTIALIAS)
@@ -652,7 +650,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     # TODO: Use argparser?
     url = '' # by default, write nothing
-    options = ['strict', 'genre-only', 'confirm-art', 'forget', 'debug']
+    options = ['strict', 'confirm', 'forget', 'verbose']
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:
@@ -683,35 +681,21 @@ if __name__ == "__main__":
         try: # read AAC info
             id3 = False # aac
             tags = MP4(filepath)
-            print('Adding metadata according to AAC specifications.')
         except MP4StreamInfoError:
             id3 = True # mp3
             try: # check header presence
                 tags = ID3(filepath)
-                print('Adding metadata using the ID3 header.')
             except ID3NoHeaderError:
                 raise ValueError("Format may be incorrect.")
 
         # Call functions and apply metadata
-        print(f"Retrieving metadata for \"{artist} - {recording}\"...")
+        if options['verbose']:
+            print(f"Retrieving metadata for \"{artist} - {recording}\".")
         artist, recordings = guess_recordings(artist, recording) # pull just the recordings
         recording = recordings[0]['title'] # just use the first one
         albumprops = guess_album(recordings) # pull album year, artwork, and genres
         if albumprops is None:
             raise ValueError("Found no metadata.")
-        # Special options for just tagging genres
-        if options['genre-only']:
-            print(f"Adding genres: {', '.join(albumprops['genres'])}.")
-            if id3:
-                # Not sure how to replicate the below for ID3
-                tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
-                tags.save(filepath) # supply path, in case we are creating for first time
-            if not id3:
-                # Only do this if genres have changed
-                if tags["\xa9gen"] != [*albumprops['genres']]:
-                    tags["\xa9gen"] = [*albumprops['genres']]
-                    tags.save()
-            sys.exit()
 
         # Edit the ID3 header, if file has one
         print(f"Adding metadata: MusicBrainz artwork, artist '{artist}', album "
