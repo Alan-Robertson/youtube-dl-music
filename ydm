@@ -14,7 +14,7 @@ mp3=false   # mp3 or m4a by default?
 quick=0     # 1 means skip metadata, 2 means skip normalization
 metadata=true   # by default, retrieve metadata and noarmalize
 classical=false # different folder for classical music
-flags_norm="-t -23" # normalize to default of -23
+normflags="-t -23" # normalize to default of -23
 $mp3 && ext_new="mp3" || ext_new="m4a"
 while [ $# -gt 0 ]; do
   case $1 in
@@ -25,8 +25,7 @@ while [ $# -gt 0 ]; do
     -cl|--classical) classical=true; ;;
     -c=*|--cut-leading)  lead=${1#*=} ;; # cut leading time, seconds
     -C=*|--cut-trailing) trail=${1#*=} ;; # cut trailing time, seconds
-    --strict|--confirm|--forget|--verbose) flags_metadata+="$1 "; ;;
-    -[-a-zA-Z0-9]*) echo "Error: Unknown flag \"$1\"." && exit 1; ;;
+    -[-a-zA-Z0-9]*)  metaflags+="$1" ;;
     http*) url="$1"; ;;    # youtube url
     *)     name+=" $1"; ;; # so user can specify filename without spaces
   esac
@@ -35,14 +34,14 @@ done
 
 # 'Extra' arguments for trimming time; can be passed to ffmpeg-normalize
 # See this link for trimming: https://superuser.com/questions/258032/is-it-possible-to-use-ffmpeg-to-trim-off-x-seconds-from-the-beginning-of-a-video
-flags_trim="-e=" # open
+trimflag="-e=" # open
 if [ ! -z $lead ]; then
   echo "Trimming first $lead seconds."
-  flags_trim+="-ss $lead "
+  trimflag+="-ss $lead "
 fi
 if [ ! -z $trail ]; then
   echo "Trimming last $trail seconds."
-  flags_trim+="-sseof $trail "
+  trimflag+="-sseof $trail "
 fi
 # Trim trialing spaces for filenames
 name="${name# }"
@@ -120,15 +119,15 @@ bitrate=$((bitrate*3/2))
 # Save to m4a, uses highest quality encoder
 if ! $mp3; then
   echo "Normalizing volume, outputing to m4a."
-  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libfdk_aac -b:a ${bitrate}k -o "$path_normalized"
-  # ffmpeg-normalize $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized" "$path"
-  # ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
+  ffmpeg-normalize "$path" $normflags "$trimflag" -f -c:a libfdk_aac -b:a ${bitrate}k -o "$path_normalized"
+  # ffmpeg-normalize $normflags "$trimflag" -f -c:a libfdk_aac -o "$path_normalized" "$path"
+  # ffmpeg-normalize "$path" $normflags "$trimflag" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
   [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
 # Save to mp3
 # TODO: Fix this, tried with and without intermediary but still fails
 else
   echo "Normalizing volume, outputing to mp3."
-  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libmp3lame -b:a ${bitrate}k -o "$path_normalized"
+  ffmpeg-normalize "$path" $normflags "$trimflag" -f -c:a libmp3lame -b:a ${bitrate}k -o "$path_normalized"
   # echo "Generating intermediate file."
   # ffmpeg-normalize "$path" -v -f -o "$path_intermediate"
   # ffmpeg -y -i "$path_intermediate" -c:a libmp3lame "$path_normalized"
@@ -144,5 +143,5 @@ mv "$path_normalized" "$path_new"
 # Change metadata using python function
 #------------------------------------------------------------------------------#
 echo "Adding metadata."
-ydm-metadata $flags_metadata --url="$url" "$path_new"
+ydm-metadata $metaflags -u="$url" "$path_new"
 [ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1

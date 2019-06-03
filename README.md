@@ -64,12 +64,12 @@ The `ydm-metadata` script is called automatically by `ydm`, but you may want to 
 
 This time the filename(s) must have escaped spaces. The following command-line options are available:
 
-* `--verbose`: Increases verbosity.
-* `--strict`: Makes sure recording name matches input title name exactly.
-* `--forget`: By default, previous user responses to ambiguous artist names are cached in the CSV file `choices`. This disables caching and lookup.
-* `--confirm`: By default, the algorithm prefers newer releases of type "album" and "single" for album artwork. This prompts user to always confirm the release/release group for album artwork.
+* `-v`: Increases verbosity.
+* `-s`: Enables strict mode. Makes sure recording name matches input title name exactly.
+* `-f`: Enables forget mode. By default, previous user responses to ambiguous artist names are cached in the CSV file `choices`. This disables caching and lookup.
+* `-c`: Enables confirm mode. By default, the algorithm prefers newer releases of type "album" and "single" for album artwork. This prompts user to always confirm the release/release group for album artwork.
 
-In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses, because parentheses often contain additional information unrelated to the song title. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
+In some cases, the tagging algorithm fails with `-s` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses, because parentheses often contain additional information unrelated to the song title. But in other cases it may be necessary -- e.g. without `-s`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
 
 `ydm-metadata` is certainly not the fastest tagging algorithm out there. For example, the builtin cover art downloader for the Android app "PowerAmp" is pretty darn fast. `ydm-metadata` is designed to strictly *minimize tagging errors*, and get the *highest possible quality cover art*. So, it is slow, but very accurate.
 
