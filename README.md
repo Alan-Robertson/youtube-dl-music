@@ -64,8 +64,8 @@ The `ydm-metadata` script is called automatically by `ydm`, but you may want to 
 
 This time the filename(s) must have escaped spaces. The following command-line options are available:
 
-* `--verbose`: Increase verbosity.
-* `--strict`: Make sure recording name matches input title name exactly.
+* `--verbose`: Increases verbosity.
+* `--strict`: Makes sure recording name matches input title name exactly.
 * `--forget`: By default, previous user responses to ambiguous artist names are cached in the CSV file `choices`. This disables caching and lookup.
 * `--confirm`: By default, the algorithm prefers newer releases of type "album" and "single" for album artwork. This prompts user to always confirm the release/release group for album artwork.
 
