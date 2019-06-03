@@ -17,7 +17,7 @@ then restart the shell or "source" the file with `source ~/.bash_profile`. Now, 
 
 If you don't want to use `ydm-metadata`, just manually install `ffmpeg`, `youtube-dl`, and `ffmpeg-normalize`, and always use the flag `-q` when calling the `ydm` command.
 
-If you do want to use **`ydm-metadata`**, a few more steps are required:
+If you do want to use `ydm-metadata`, a few more steps are required:
 
   1. Make sure your version of `python3` is python3.6+. Check this with `python3 --version`. The `ydm-metadata` script has f-strings, which are a python 3.6+ feature. f-strings are totally awesome and you should be using them (: .
   1. Run the `ydm-install` command. This does the following:
