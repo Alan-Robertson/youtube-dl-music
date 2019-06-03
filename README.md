@@ -64,12 +64,10 @@ The `ydm-metadata` script is called automatically by `ydm`, but you may want to 
 
 This time the filename(s) must have escaped spaces. The following command-line options are available:
 
-* `--debug`: Increase verbosity.
-* `--url=<url>`: Add a URL to file metadata under the "Comment" category. The `ydm` script passes this argument by default.
+* `--verbose`: Increase verbosity.
+* `--strict`: Make sure recording name matches input title name exactly.
 * `--forget`: By default, previous user responses to ambiguous artist names are cached in the CSV file `choices`. This disables caching and lookup.
-* `--confirm-art`: By default, the algorithm prefers newer releases of type "album" and "single" for album artwork. This prompts user to always confirm the release/release group for album artwork.
-* `--genre-only`: Add only genre metadata, nothing else.
-* `--strict`: Apply filter on recording names, to make sure the words match.
+* `--confirm`: By default, the algorithm prefers newer releases of type "album" and "single" for album artwork. This prompts user to always confirm the release/release group for album artwork.
 
 In some cases, the tagging algorithm fails with `--strict` -- e.g. a search for "Aerosmith - Dude Looks Like A Lady" filters out titles "Dude (Looks Like A Lady)" with parentheses, because parentheses often contain additional information unrelated to the song title. But in other cases it may be necessary -- e.g. without `--strict`, a search for "Pink Floyd - Mother" also returns "Pink Floyd - Matilda Mother".
 
