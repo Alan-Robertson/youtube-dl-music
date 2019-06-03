@@ -24,7 +24,7 @@ If you do want to use `ydm-metadata`, a few more steps are required:
       * Installs the python packages needed for `ydm-metadata` (see below).
       * Creates a file named `config` in the `youtube-dl-music` directory.
   1. Create an account with [**Discogs**](https://www.discogs.com/users/create) and another account with [**MusicBrainz**](https://musicbrainz.org/register?uri=%2Fdoc%2FHow_to_Create_an_Account). Discogs and MusicBrainz are the two major online discography databases, each with their strengths and weaknesses each with public python APIs. So, why don't we use both? :)
-      * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the **Generate token** button.
+      * After creating the Discogs account, click on the top-right profile image and to Settings --> Developer, then click the "Generate token" button.
   1. Add the following lines to the file `config` in the format `key = value` (note whitespace doesn't matter, and entries don't need to be quoted):
       * To set the download location: `directory = <your music folder here>`.
       * To use the Discogs API: use the token you created in step (3) with `token = <your token here>`.
