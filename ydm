@@ -10,8 +10,8 @@
 #    to get year of release, album name, album artwork, and genres.
 #------------------------------------------------------------------------------#
 # Parse input, including optional flags
-quick=0     # 1 means skip metadata, 2 means skip normalization
 mp3=false   # mp3 or m4a by default?
+quick=0     # 1 means skip metadata, 2 means skip normalization
 metadata=true   # by default, retrieve metadata and noarmalize
 classical=false # different folder for classical music
 flags_norm="-t -23" # normalize to default of -23
@@ -44,7 +44,6 @@ if [ ! -z $trail ]; then
   echo "Trimming last $trail seconds."
   flags_trim+="-sseof $trail "
 fi
-
 # Trim trialing spaces for filenames
 name="${name# }"
 name="${name% }"
@@ -52,7 +51,6 @@ echo URL: $url
 echo Name: $name
 [ -z "$url" ] && echo "Error: Must supply URL." && exit 1
 [ -z "$name" ] && echo "Error: Must supply output filename." && exit 1
-
 # Download directory; default is where I keep my music
 # Note 'cut' will automatically trim leading/trailing whitespace it seems
 directory="$(cat $(dirname $(realpath $0))/config | grep "directory" | cut -s -d '=' -f 2 | xargs)"
@@ -66,7 +64,13 @@ rejects="${rejects/"~"/$HOME}"
 rejects="${rejects%/}"
 [[ ! -d "$directory" ]] && echo "Error: Directory \"$directory\" does not exist,"\
   "or the directory was not declared/incorrectly declared in the config file." && exit 1
-
+# A few basic settings
+# TODO: Support for downloading entire playlists or albums
+path_template="$directory/$name-download.%(ext)s" # see youtube-dl help info; just picks whatever extension
+path_normalized="$directory/$name-normalized.$ext_new"
+path_intermediate="$directory/$name-normalized.wav" # sometimes unused
+path_new="$directory/$name.$ext_new"
+flags="-q -f bestaudio --no-playlist"
 # Optionally confirm
 if [ ! -z "$rejects" ] && compgen -G "$rejects/$name.*" &>/dev/null; then
   while true; do
@@ -77,18 +81,17 @@ if [ ! -z "$rejects" ] && compgen -G "$rejects/$name.*" &>/dev/null; then
   done
 fi
 
-# A few basic settings
-# TODO: Support for downloading entire playlists or albums
-path_template="$directory/$name-download.%(ext)s" # see youtube-dl help info; just picks whatever extension
-path_normalized="$directory/$name-normalized.$ext_new"
-path_intermediate="$directory/$name-normalized.wav" # sometimes unused
-path_new="$directory/$name.$ext_new"
-flags="-q -f bestaudio --no-playlist"
+# Helper function
+# NOTE: Could also use afinfo for this part
+# let bits=$(afinfo "$path" | grep 'bit rate' | tr -dc '[0-9]')/1000
+bitrate() {
+  ffmpeg -i "$1" -hide_banner 2>&1 | cat | grep 'bitrate' | cut -d, -f3 | tr -dc '[0-9]'
+}
 
 #------------------------------------------------------------------------------#
 # Download, using youtube-dl
 #------------------------------------------------------------------------------#
-echo "Determining filename."
+echo "Determining filetype."
 path="$(youtube-dl --get-filename $flags "$url" -o "$path_template")" # no playlist, in case user provides playlist URL
 [ -z "$path" ] && echo "Error: Could not get name." && exit 1
 ext="${path##*.}"
@@ -107,26 +110,34 @@ youtube-dl $flags "$url" -o "$path_template" # no playlist, in case user provide
 #   file with output bitrate roughly matching original bitrate. Save into m4a
 #   because it is better, more efficient format than mp3.
 #------------------------------------------------------------------------------#
+# Get bitrate
+# WARNING: For some reason ffmpeg-normalize sometimes elevates the bitrate by
+# a ton, while simple ffmpeg command (e.g. ffmpeg -i file1.m4a -c:a libfdk_aac file2.m4a)
+# does not change the bitrate much. So manually specify output bitrate.
+bitrate=$(bitrate "$path")
+echo "Bitrate: ${bitrate}kbps"
+bitrate=$((bitrate*3/2))
+# Save to m4a, uses highest quality encoder
+if ! $mp3; then
+  echo "Normalizing volume, outputing to m4a."
+  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libfdk_aac -b:a ${bitrate}k -o "$path_normalized"
+  # ffmpeg-normalize $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized" "$path"
+  # ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
+  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
 # Save to mp3
 # TODO: Fix this, tried with and without intermediary but still fails
-if $mp3; then
+else
   echo "Normalizing volume, outputing to mp3."
-  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libmp3lame -o "$path_normalized"
+  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libmp3lame -b:a ${bitrate}k -o "$path_normalized"
   # echo "Generating intermediate file."
   # ffmpeg-normalize "$path" -v -f -o "$path_intermediate"
   # ffmpeg -y -i "$path_intermediate" -c:a libmp3lame "$path_normalized"
   [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
-# Save to m4a, uses highest quality encoder
-else
-  echo "Normalizing volume, outputing to m4a."
-  ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized"
-  # ffmpeg-normalize $flags_norm "$flags_trim" -f -c:a libfdk_aac -o "$path_normalized" "$path"
-  # ffmpeg-normalize "$path" $flags_norm "$flags_trim" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
-  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
 fi
+# Cleanup
+echo "Bitrate: ${bitrate}kbps"
 rm "$path"
 mv "$path_normalized" "$path_new"
-# Bail
 [ $quick -ge 1 ] && exit 0
 
 #------------------------------------------------------------------------------#

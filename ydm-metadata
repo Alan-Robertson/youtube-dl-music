@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-This script adds metadata from the MusicBrainz database based on the <artist> - <title> 
-from so-formatted audio files. If file is not AAC/MP4 (iTunes default), will use ID3v2.4 header; 
-otherwise, will use special MP4 metadata assignment. Requires musicbrainzngs (use pip install).
-"""
-# TODO:
-# 1) Maybe pull cover art from Discogs master-release info if it is available; Discogs
-# could be generally more reliable there. But still use MusicBrainz for searching because impossible
-# to search for recording and artist at same time with current Discogs API.
-# 2) Try to get rid of the current empirical steps, like genre-tag filtering (usually to
-# fix the weird MusicBrainz results) and artist name verification. For the former, could just get
-# Discogs genre from **every available Master release** from the groups of recordings.
+This script adds metadata from the MusicBrainz and Discogs databases
+for 'Artist - Title.mp3' and 'Artist - Title.m4a' files. If the file is not
+AAC/MP4, the ID3v2.4 header is used to write metadata. Otherwise, special
+MP4 metadata specification is used. Requires musicbrainzngs.
 
+Todo
+----
+1. Maybe pull cover art from Discogs master-release info if it is available; Discogs
+   could be generally more reliable there. But still use MusicBrainz for searching because impossible
+   to search for recording and artist at same time with current Discogs API.
+2. Try to get rid of the current empirical steps, like genre-tag filtering (usually to
+   fix the weird MusicBrainz results) and artist name verification. For the former, could just get
+   Discogs genre from **every available Master release** from the groups of recordings.
+3. Fix automatic album selection to ensure album always uses Latin characters,
+   i.e. no Japanese text and whatnot!
+"""
 # Tagging tools
 # PE1 is artist, CON is genre, ALB is album name, YER is year of recording,
 # ORY is original release year, IT2 is song title, APIC is artwork, and COMM is comment
@@ -322,7 +326,7 @@ def guess_album(recordings):
     image = None # initialize
     metadata = None # initialize
     for itype,type_prefs in enumerate(type_prefs_grouped):
-        print(f"Trying albums of type: {', '.join(type_prefs)}.")
+        print(f"Trying album types: {', '.join(type_prefs)}.")
         for type_ in type_prefs:
             groupsA = [group for group in groups if group.get('type','NA')==type_]
             for firstyear in sorted(set(min(group['years']) for group in groupsA)): # note min([None])==None
@@ -687,15 +691,12 @@ if __name__ == "__main__":
             tags["TIT2"] = TIT2(text=recording) # just track name
             tags["COMM"] = COMM(text=url, lang="eng", desc="URL")
             # Album stuff
+            # NOTE: Also have TYER, TORY, TDAT, and TRDA for times
             tags["TDOR"] = TDOR(text=albumprops['year']) # original release time
             tags["TDRC"] = TDRC(text=albumprops['year']) # recording time
             tags["TDRL"] = TDRL(text=albumprops['year']) # release time
             tags["TALB"] = TALB(text=albumprops['title']) # album
             tags["TOAL"] = TOAL(text=albumprops['title']) # original album
-            # tags["TYER"] = TYER(text=data['year']) # doesn't show up in swinsian, for some reason
-            # tags["TORY"] = TORY(text=data['year']) # maybe this will
-            # tags["TDAT"] = TDAT(text=data['year']) # recording date(s) (?)
-            # tags["TRDA"] = TRDA(text='0101') # recording date, MMDD
             # Artwork
             if albumprops['image'] is not None:
                 tags["APIC"] = APIC(data=albumprops['image'])
@@ -716,5 +717,5 @@ if __name__ == "__main__":
                 tags["covr"] = [MP4Cover(albumprops['image'], imageformat=MP4Cover.FORMAT_JPEG)]
             if albumprops['genres'] is not None:
                 tags["\xa9gen"] = [*albumprops['genres']] # genres
-            tags.save() # don't need to re-supply with path
+            tags.save()
 
