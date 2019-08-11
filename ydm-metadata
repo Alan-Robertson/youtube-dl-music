@@ -21,6 +21,7 @@ Todo
 # ORY is original release year, IT2 is song title, APIC is artwork, and COMM is comment
 from mutagen.mp4 import MP4, MP4Cover, MP4StreamInfoError
 from mutagen.id3 import ID3, ID3NoHeaderError, TIT2, TPE1, TCON, TALB, TOAL, TDRC, TDOR, TDRL, APIC, COMM
+from mutagen.oggopus import OggOpus
 # Argument parsing
 import argparse
 # Database APIs
@@ -39,7 +40,8 @@ import pandas as pd
 import re # needed later
 import sys
 import os
-import unidecode as ud # converting accents to normal characters
+import unidecode as ud # converting accents to normal characters\
+import shutil
 
 #------------------------------------------------------------------------------#
 # Configure
@@ -96,16 +98,29 @@ anglo_countries = ('NA','XU','XW','XE','US','GB','AU','CA','IE','other')
 #------------------------------------------------------------------------------#
 # Request user yes/no input and parses
 def confirm():
-    if not options['c']:
+    if options['c'] is True:
         return True
-    while True: # just keep going until get valid one
-        response = input('Confirm (y/n)?')
+    return confirm_question()
+
+
+def confirm_question():
+    response = input('Confirm (Y/n)?')
+    if options['y'] is True:
+        return True
+    if options['n'] is True:
+        return True
+
+    while True:
         if len(response)>0:
             if response[0].lower()=='n':
                 return False # continue?
             elif response[0].lower()=='y':
-                return True # continue?
-        print('Invalid choice.') 
+                return True # continue? 
+        else:
+            return True   
+        print("Invalid Input")
+        response = input('Confirm (Y/n)?')
+
 # Get URL data from HTML lines
 # Each page.find moves the "reader/parser" farther down the object
 def find_urls(page):
@@ -116,6 +131,8 @@ def find_urls(page):
     end_quote = page.find('"', start_quote+1)
     url = page[start_quote+1:end_quote]
     return url, end_quote
+
+
 # Standardize text by eliminating all non-alphanumeric characters,
 # parentheticals, and accents
 def words(string):
@@ -132,6 +149,9 @@ def words(string):
         # istring = re.sub(r"“(.*)”",r"\1",istring) # remove quotes
         # istring = re.sub(r"\((.*)\)",r"\1",istring) # remove parentheses
     return iwords
+
+
+
 # Parse user response
 def parse(choices, N): # N is max possible number
     if len(choices)==0:
@@ -199,6 +219,10 @@ def guess_recordings(artist, recording): #artistnames, artistids):
             # Add to list of names
             if round2 and offset==0: # only after we were successful
                 print(f"Warning: Probable typo in your filename; should be should be \"{artist} - {recording}.\"")
+                # print(f"Correct typo? (-y or -n to skip if you're batching)")
+                # if confirm_question():
+                #     shutil.copy()
+
             recordings.extend(new_recordings)
             offset += len(new_recordings)
     # Lists
@@ -306,6 +330,10 @@ def guess_album(recordings):
     # Message
     print(f"Consolidated {len(releases):d} releases into {len(groups)} release groups ({duplicates:d} duplicates removed).")
 
+    if options['v'] is True:
+        for release in releases:
+            print(release)
+
     # Add new information to the original release-group dictionaries
     # This information will be used to sort albums by a hieararchy of preferred characteristics
     for group in groups:
@@ -326,7 +354,7 @@ def guess_album(recordings):
     image = None # initialize
     metadata = None # initialize
     for itype,type_prefs in enumerate(type_prefs_grouped):
-        print(f"Trying album types: {', '.join(type_prefs)}.")
+        #print(f"Trying album types: {', '.join(type_prefs)}...")
         for type_ in type_prefs:
             groupsA = [group for group in groups if group.get('type','NA')==type_]
             for firstyear in sorted(set(min(group['years']) for group in groupsA)): # note min([None])==None
@@ -340,6 +368,7 @@ def guess_album(recordings):
                         if title is None or image is None:
                             title = min((title for title in group['titles'] if
                                 group.get('country','NA') in anglo_countries), key=len)
+
                         # 3) Get the genres, if haven't found them yet
                         # Will prioritize Discogs genres but use MusicBrainz as backup
                         # * Discogs genres are from the Master release, not specific to song
@@ -358,25 +387,28 @@ def guess_album(recordings):
                             else:
                                 genres = dgenres + mgenres[:len(dgenres)]
                         # Consolidate info so far
-                        metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
+                        candidate_metadata = {'title':title, 'year':year, 'genres':genres, 'image':None}
                         # 4) Next the album artwork
                         # First confirm user wants to use this album for artwork
+
                         years = [year for year in group['years'] if year!=9999]
                         years = [-1] if len(years)==0 else years
-                        if options['v']:
+
+                        if not options['c']:
                             print(f"Release-group candidate: name(s) '{', '.join(group['titles'])}', type '{type_}', "
                                   f"count {group['count']}, earliest year '{min(years)}', latest year '{max(years)}'.")
+
                         if not confirm():
                             continue
+                        metadata = candidate_metadata
                         image = guess_artwork(group['releases'])
                         if image is None:
                             if options['v']:
                                 print("No album artwork available for this group.")
-                            continue
                         else:
                             metadata.update({'image':image})
-                            return metadata
-
+                        return metadata
+                     
     # Exit from here if failed to get artwork every time
     if options['v']:
         print("Warning: Failed to find album artwork.")
@@ -414,14 +446,15 @@ def guess_artwork(releases):
                     # User input
                     rmedia = [m.get('format','') for m in release.get('medium-list',[{}])]
                     rcountry, rtitle = release.get('country',''), release.get('title','')
-                    if options['v']:
+                    if options['c']:
                         print(f"Release candidate: name '{rtitle}', media '{', '.join(rmedia)}', country '{rcountry}', year '{year}'.")
-                    if not confirm():
-                        continue
-                    # Pull artwork
+                        if not confirm():
+                            continue
+                        # Pull artwork
                     # This is a slow step, so make sure to print message
                     try:
-                        print('Trying album...')
+                        if options['v']:
+                            print('Trying album artwork...')
                         data = mb.get_image_front(release.get('id',''))
                     except ResponseError:
                         continue
@@ -560,6 +593,7 @@ def genres_musicbrainz(recordings):
         if len(words)==0:
             genres_new.append(['', 0])
             continue
+
         # Handle abbreviations and style variations
         if words[0]=='alt': # here Discogs does not use abbreviation
             words[0] = 'alternative'
@@ -629,7 +663,7 @@ if __name__ == "__main__":
     # Parse all command-line arguments
     # TODO: Use argparser?
     url = '' # by default, write nothing
-    options = 'scfv'
+    options = 'scfvyn'
     options = {option: False for option in options} # the default settings
     filepaths = []
     for arg in sys.argv[1:]:
@@ -657,15 +691,23 @@ if __name__ == "__main__":
 
         # Open file, for different types
         # Currently have compatibility with MP4 and ID3 tags
-        try: # read AAC info
-            id3 = False # aac
-            tags = MP4(filepath)
-        except MP4StreamInfoError:
-            id3 = True # mp3
-            try: # check header presence
-                tags = ID3(filepath)
-            except ID3NoHeaderError:
-                raise ValueError("Format may be incorrect.")
+
+        tag_types = {'opus':OggOpus, 'id3':ID3, 'aac':MP4}
+        tag = None
+
+        for tag_type in tag_types:
+            try:
+                if options['v']:
+                    print("Trying: {} ...".format(tag_type))
+                tags = tag_types[tag_type](filepath)
+                tag = tag_type
+            except:
+                if options['v']:
+                    print("Failed...")
+
+        if tag is None:
+            raise Exception('Tag Format not known, feel free to add it, mutagen is excellent')
+
 
         # Call functions and apply metadata
         if options['v']:
@@ -676,6 +718,13 @@ if __name__ == "__main__":
         if albumprops is None:
             raise ValueError("Found no metadata.")
 
+        print("{artist} - {name} ({album} : {year}; {genre})".format(
+            artist = artist,
+            name = recording,
+            album = albumprops['title'],
+            year = albumprops['year'],
+            genre = albumprops['genres']))
+
         # Edit the ID3 header, if file has one
         message = f"{albumprops['title']} ({albumprops['year']}"
         if len(albumprops['genres'])==0:
@@ -683,7 +732,9 @@ if __name__ == "__main__":
         else:
             message += ('; genres ' + ', '.join(albumprops['genres']) + ').')
         print(message)
-        if id3:
+
+
+        if tag == 'id3':
             # Below are ID3v2, not ID3v2.4 (default format of mutagen, and modern version)
             tags.delete(filepath) # delete old data, if we downloaded from somewhere; want to assigne my better data
             # General stuff
@@ -698,14 +749,14 @@ if __name__ == "__main__":
             tags["TALB"] = TALB(text=albumprops['title']) # album
             tags["TOAL"] = TOAL(text=albumprops['title']) # original album
             # Artwork
-            if albumprops['image'] is not None:
-                tags["APIC"] = APIC(data=albumprops['image'])
+            # if albumprops['image'] is not None:
+            #     tags["APIC"] = APIC(data=albumprops['image'])
             if albumprops['genres'] is not None:
                 tags["TCON"] = TCON(text=albumprops['genres'][0], genres=albumprops['genres'])
             tags.save(filepath) # supply path, in case we are creating ID3 header for first time
 
-        # Or just edit as an AAC file
-        else:
+
+        if tag == 'aac':
             # General stuff
             tags["\xa9ART"] = [artist] # artist; includes whether "The" is in front, best punctuation, etc.
             tags["\xa9nam"] = [recording] # track name
@@ -713,9 +764,26 @@ if __name__ == "__main__":
             # Album stuff
             tags["\xa9day"] = [albumprops['year']]
             tags["\xa9alb"] = [albumprops['title']] # album, from lookup
-            if albumprops['image'] is not None:
-                tags["covr"] = [MP4Cover(albumprops['image'], imageformat=MP4Cover.FORMAT_JPEG)]
+            # if albumprops['image'] is not None:
+            #     tags["covr"] = [MP4Cover(albumprops['image'], imageformat=MP4Cover.FORMAT_JPEG)]
             if albumprops['genres'] is not None:
                 tags["\xa9gen"] = [*albumprops['genres']] # genres
             tags.save()
+
+        if tag == 'opus':
+            # General Stuff
+
+            tags["TITLE"] = [recording]
+            tags["ARTIST"]= [artist]
+
+            #Album Stuff
+            tags["ALBUM"] = [albumprops['title']]
+            try:
+                tags["GENRE"] = [albumprops['genres'][0]]
+            except:
+                print("No Genre Found")
+            tags["YEAR"] = [albumprops['year']]
+            #TODO tags["TRACKNUMBER"]
+            tags.save()
+            
 

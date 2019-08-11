@@ -1,13 +1,19 @@
 <!-- ## Be Careful! -->
 <!-- Downloading content from the internet for personal use (not distribution) is not illegal (criminal law or copyright infringement); but by using this script, you are breaking Youtube's Terms of Service (civil law). Then again, that's a problem for the `youtube-dl` devs, not us :) -->
-# Overview
-<!-- [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](lukelbd@gmail.com) -->
+
+# Overview - Changes
+This script is forked from https://github.com/lukelbd/youtube-dl-music
+I've reworked it for opus support and to use the -s flag to search youtube and grab the URL. If this doesn't work then you can manually find your own url and use that. 
+
+
+
+
 This script uses `youtube-dl` to download and save audio from youtube into `aac`/`m4a` files (the native format of youtube audio), normalizes the audio/volume using `ffmpeg-normalize`, and adds metadata tags using a python script called `ydm-metadata`.
 
 # Installation
 This library is intended for UNIX shells -- i.e. MacOS, Ubuntu, perhaps the Windows 10 UNIX terminal (untested). Install this library by navigating to your **home** directory in the terminal, and entering
 
-    git clone https://github.com/lukelbd/youtube-dl-music
+    git clone https://github.com/alan-robertson/youtube-dl-music
 
 This should create a directory named `youtube-dl-music`. You then need to make sure the `ydm` and `ydm-metadata` executables are in your `$PATH` variable. The simplest option may be to place in your `.bash_profile` or `.bashrc` the line 
 

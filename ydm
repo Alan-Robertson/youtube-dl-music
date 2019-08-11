@@ -10,12 +10,24 @@
 #    to get year of release, album name, album artwork, and genres.
 #------------------------------------------------------------------------------#
 # Parse input, including optional flags
+
+# For people who don't want to add ydm to their path
+# Change this to wherever you put ydm
+ydmpath="/home/USER/Music/youtube-dl-music"
+
+# Force extention type with this
+# Incomplete, just ffmpeg everything yourself if you need to
+ext="opus"
+
 mp3=false   # mp3 or m4a by default?
 quick=0     # 1 means skip metadata, 2 means skip normalization
 metadata=true   # by default, retrieve metadata and noarmalize
 classical=false # different folder for classical music
 normflags="-t -23" # normalize to default of -23
+search=false
 $mp3 && ext_new="mp3" || ext_new="m4a"
+verbose=false
+
 while [ $# -gt 0 ]; do
   case $1 in
     -3|--mp3)        mp3=true  ;; # m4a is better format so generally want to avoid this
@@ -25,12 +37,26 @@ while [ $# -gt 0 ]; do
     -cl|--classical) classical=true; ;;
     -c=*|--cut-leading)  lead=${1#*=} ;; # cut leading time, seconds
     -C=*|--cut-trailing) trail=${1#*=} ;; # cut trailing time, seconds
+    -s|--search) search=true; ;;
+    -v|--verbose) verbose=true; ;;
     -[-a-zA-Z0-9]*)  metaflags+="$1" ;;
     http*) url="$1"; ;;    # youtube url
     *)     name+=" $1"; ;; # so user can specify filename without spaces
   esac
   shift
 done
+
+if $search; then
+    url=`youtube-dl --get-url --default-search "ytsearch" "ytsearch:$name" --extract-audio` 
+    read -a strarr <<< "$url"
+    url=${strarr[0]}
+
+fi
+
+if $verbose; then 
+  ytdl_flags+=' -v '
+  metaflags+=' -v '
+fi
 
 # 'Extra' arguments for trimming time; can be passed to ffmpeg-normalize
 # See this link for trimming: https://superuser.com/questions/258032/is-it-possible-to-use-ffmpeg-to-trim-off-x-seconds-from-the-beginning-of-a-video
@@ -46,10 +72,13 @@ fi
 # Trim trialing spaces for filenames
 name="${name# }"
 name="${name% }"
-echo URL: $url
-echo Name: $name
+
+echo " Name: $name"
+echo " URL: $url"
+
 [ -z "$url" ] && echo "Error: Must supply URL." && exit 1
 [ -z "$name" ] && echo "Error: Must supply output filename." && exit 1
+
 # Download directory; default is where I keep my music
 # Note 'cut' will automatically trim leading/trailing whitespace it seems
 directory="$(cat $(dirname $(realpath $0))/config | grep "directory" | cut -s -d '=' -f 2 | xargs)"
@@ -58,90 +87,83 @@ directory="${directory%/}" # trim trailing slash if present
 if $classical; then
   directory="${directory%/*}/classical"
 fi
+
 rejects="$(cat $(dirname $(realpath $0))/config | grep "rejects" | cut -s -d '=' -f 2 | xargs)"
 rejects="${rejects/"~"/$HOME}"
 rejects="${rejects%/}"
 [[ ! -d "$directory" ]] && echo "Error: Directory \"$directory\" does not exist,"\
   "or the directory was not declared/incorrectly declared in the config file." && exit 1
-# A few basic settings
-# TODO: Support for downloading entire playlists or albums
-path_template="$directory/$name-download.%(ext)s" # see youtube-dl help info; just picks whatever extension
-path_normalized="$directory/$name-normalized.$ext_new"
-path_intermediate="$directory/$name-normalized.wav" # sometimes unused
-path_new="$directory/$name.$ext_new"
-flags="-q -f bestaudio --no-playlist"
-# Optionally confirm
-if [ ! -z "$rejects" ] && compgen -G "$rejects/$name.*" &>/dev/null; then
-  while true; do
-    read -r -p "Warning: File is present in \"rejects\" folder. Are you sure you want to download it? ([y]/n) " response
-    [ ! -z "$response" ] && [[ ! "$response" =~  ^[NnYy]$ ]] && continue # invalid
-    [[ "$response" =~ ^[Nn]$ ]] && exit # answer is either yes, no, or blank (i.e. yes)
-    break
-  done
+
+
+#------------------------------------------------------------------------------#
+# Extract song name and artist name
+#------------------------------------------------------------------------------#
+IFS='-'
+
+read -a strarr <<< "$name"
+artist=${strarr[0]}
+song=${strarr[1]}
+
+IFS=' '
+#Trim trailing whitespace
+artist="$(echo -e "${artist}" | sed -e 's/[[:space:]]*$//')"
+#read -a strarr <<< "$artist"
+#artist=${strarr[0]}
+
+# Make directory if it doesn't exist
+mkdir -p "$directory/$artist"
+
+if $verbose; then
+  echo $artist
+  echo $song
 fi
 
-# Helper function
-# NOTE: Could also use afinfo for this part
-# let bits=$(afinfo "$path" | grep 'bit rate' | tr -dc '[0-9]')/1000
-bitrate() {
-  ffmpeg -i "$1" -hide_banner 2>&1 | cat | grep 'bitrate' | cut -d, -f3 | tr -dc '[0-9]'
-}
+# A few basic settings
+# TODO: Support for downloading entire playlists or albums
+
+if $verbose; then
+  echo "Avaliable Formats:"
+  youtube-dl -F $url
+fi
+
+path_template="$directory/$artist/$name.%(ext)s" # see youtube-dl help info; just picks whatever extension
+
+ytdl_flags="--no-playlist --format bestaudio --extract-audio"
 
 #------------------------------------------------------------------------------#
 # Download, using youtube-dl
 #------------------------------------------------------------------------------#
-echo "Determining filetype."
-path="$(youtube-dl --get-filename $flags "$url" -o "$path_template")" # no playlist, in case user provides playlist URL
+echo "Determining filetype..."
+path="$(youtube-dl --get-filename "$url" -o "$path_template")" 
 [ -z "$path" ] && echo "Error: Could not get name." && exit 1
-ext="${path##*.}"
-echo "Downloading."
-youtube-dl $flags "$url" -o "$path_template" # no playlist, in case user provides playlist URL
+ext_downloaded="${path##*.}"
+
+if $verbose; then
+  echo "Ext: $ext_downloaded"
+fi
+
+if [ "$ext_downloaded" = "unknown_video" ]; then
+  ext_downloaded="opus"
+fi
+ext=$ext_downloaded
+
+echo "$ext"
+
+echo "Downloading..."
+
+youtube-dl $ytdl_flags "$url" -o "$path_template" 
 [ $? -ne 0 ] && echo "Error: Download failed." && exit 1
 [ $quick -ge 2 ] && exit 0
-
-#------------------------------------------------------------------------------#
-# Normalize audio and re-compress into AAC
-# * The units are Loudness Units Relative to Full Scale.
-#   Refers to the target average loudness units for track; this
-#   will prevent clipping of sounds up to 26dB above this average.
-#   See: https://www.pro-tools-expert.com/home-page/2016/9/6/video-mastering-using-lufs
-# * Note default iTunes default bitrate is 256kbs. This step will save
-#   file with output bitrate roughly matching original bitrate. Save into m4a
-#   because it is better, more efficient format than mp3.
-#------------------------------------------------------------------------------#
-# Get bitrate
-# WARNING: For some reason ffmpeg-normalize sometimes elevates the bitrate by
-# a ton, while simple ffmpeg command (e.g. ffmpeg -i file1.m4a -c:a libfdk_aac file2.m4a)
-# does not change the bitrate much. So manually specify output bitrate.
-bitrate=$(bitrate "$path")
-echo "Bitrate: ${bitrate}kbps"
-bitrate=$((bitrate*3/2))
-# Save to m4a, uses highest quality encoder
-if ! $mp3; then
-  echo "Normalizing volume, outputing to m4a."
-  ffmpeg-normalize "$path" $normflags "$trimflag" -f -c:a libfdk_aac -b:a ${bitrate}k -o "$path_normalized"
-  # ffmpeg-normalize $normflags "$trimflag" -f -c:a libfdk_aac -o "$path_normalized" "$path"
-  # ffmpeg-normalize "$path" $normflags "$trimflag" -f -o "${path_normalized%.*}.wav" # repeat, uncompressed
-  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
-# Save to mp3
-# TODO: Fix this, tried with and without intermediary but still fails
-else
-  echo "Normalizing volume, outputing to mp3."
-  ffmpeg-normalize "$path" $normflags "$trimflag" -f -c:a libmp3lame -b:a ${bitrate}k -o "$path_normalized"
-  # echo "Generating intermediate file."
-  # ffmpeg-normalize "$path" -v -f -o "$path_intermediate"
-  # ffmpeg -y -i "$path_intermediate" -c:a libmp3lame "$path_normalized"
-  [ $? -ne 0 ] && echo "Error: Normalization failed." && exit 1
-fi
-# Cleanup
-echo "Bitrate: ${bitrate}kbps"
-rm "$path"
-mv "$path_normalized" "$path_new"
-[ $quick -ge 1 ] && exit 0
 
 #------------------------------------------------------------------------------#
 # Change metadata using python function
 #------------------------------------------------------------------------------#
 echo "Adding metadata."
-ydm-metadata $metaflags -u="$url" "$path_new"
+
+if [ -z ${ydmpath+x} ] 
+then 
+  $ydmpath/ydm-metadata $metaflags -u="$url" "$directory/$artist/$name.$ext"
+else 
+  ydm-metadata $metaflags -u="$url" "$directory/$artist/$name.$ext"
+fi
 [ $? -ne 0 ] && echo "Error: Metadata script failed." && exit 1
