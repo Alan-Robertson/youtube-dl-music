@@ -47,6 +47,7 @@ while [ $# -gt 0 ]; do
 done
 
 if $search; then
+    echo "Searching: " $name
     url=`youtube-dl --get-url --default-search "ytsearch" "ytsearch:$name" --extract-audio` 
     read -a strarr <<< "$url"
     url=${strarr[0]}
